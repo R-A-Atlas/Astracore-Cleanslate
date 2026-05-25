@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.media_processing.splitter import finalize_session_output, process_session
 from app.server.schemas import SessionStartRequest, SessionStopCommitRequest
+from app.server.session_store import load_session, save_session
 from app.server.state import SESSIONS, SessionState, key
 
 router = APIRouter(prefix="/api/session", tags=["session"])
@@ -19,6 +20,7 @@ async def session_start(payload: SessionStartRequest):
         status="recording",
         updated_at=datetime.now(timezone.utc).isoformat(),
     )
+    save_session(SESSIONS[session_key])
     return {"status": "ok", "session_key": session_key}
 
 
@@ -31,6 +33,7 @@ async def session_stop_commit(payload: SessionStopCommitRequest):
 
     state.status = "processing"
     state.updated_at = datetime.now(timezone.utc).isoformat()
+    save_session(state)
 
     try:
         merged = await finalize_session_output(payload.user_id, payload.session_id)
@@ -41,6 +44,7 @@ async def session_stop_commit(payload: SessionStopCommitRequest):
         state.frame_count = len(processed.get("frames", []))
         state.status = "ready"
         state.updated_at = datetime.now(timezone.utc).isoformat()
+        save_session(state)
 
         return {
             "status": "ok",
@@ -53,6 +57,7 @@ async def session_stop_commit(payload: SessionStopCommitRequest):
         state.status = "failed"
         state.error = str(exc)
         state.updated_at = datetime.now(timezone.utc).isoformat()
+        save_session(state)
         raise HTTPException(status_code=500, detail=f"Stop-commit failed: {exc}")
 
 
@@ -60,6 +65,10 @@ async def session_stop_commit(payload: SessionStopCommitRequest):
 async def session_status(session_id: str, user_id: str):
     session_key = key(user_id, session_id)
     state = SESSIONS.get(session_key)
-    if not state:
+    if state:
+        return state.__dict__
+
+    stored = load_session(user_id, session_id)
+    if not stored:
         raise HTTPException(status_code=404, detail="Session not found")
-    return state.__dict__
+    return stored

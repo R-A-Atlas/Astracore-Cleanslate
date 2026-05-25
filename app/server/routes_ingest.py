@@ -3,6 +3,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
+from app.server.session_store import save_session
 from app.server.state import SESSIONS, key
 
 router = APIRouter(prefix="/api/upload", tags=["ingest"])
@@ -34,6 +35,7 @@ async def upload_part(
     state = SESSIONS[session_key]
     state.parts_uploaded += 1
     state.updated_at = datetime.now(timezone.utc).isoformat()
+    save_session(state)
 
     return {
         "status": "ok",
