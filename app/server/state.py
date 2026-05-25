@@ -7,6 +7,7 @@ class SessionState:
     user_id: str
     session_id: str
     operator_key: str
+    plan: str = "retail"
     status: str = "started"
     parts_uploaded: int = 0
     merged_video: str | None = None

@@ -2,6 +2,11 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException
 
+from app.billing.usage_enforcement import (
+    can_start_session,
+    mark_session_committed,
+    mark_session_started,
+)
 from app.intel.behavior_tags import infer_behavior_tags
 from app.intel.event_extractor import build_event_rows
 from app.intel.frame_ocr import extract_frame_events
@@ -19,16 +24,26 @@ router = APIRouter(prefix="/api/session", tags=["session"])
 
 @router.post("/start")
 async def session_start(payload: SessionStartRequest):
+    allowed, reason = can_start_session(
+        user_id=payload.user_id,
+        plan=payload.plan,
+        operator_key=payload.operator_key,
+    )
+    if not allowed:
+        raise HTTPException(status_code=403, detail=reason)
+
     session_key = key(payload.user_id, payload.session_id)
     SESSIONS[session_key] = SessionState(
         user_id=payload.user_id,
         session_id=payload.session_id,
         operator_key=payload.operator_key,
+        plan=payload.plan,
         status="recording",
         updated_at=datetime.now(timezone.utc).isoformat(),
     )
+    mark_session_started(user_id=payload.user_id, plan=payload.plan)
     save_session(SESSIONS[session_key])
-    return {"status": "ok", "session_key": session_key}
+    return {"status": "ok", "session_key": session_key, "plan": payload.plan}
 
 
 @router.post("/stop-commit")
@@ -73,6 +88,7 @@ async def session_stop_commit(payload: SessionStopCommitRequest):
         state.status = "ready"
         state.updated_at = datetime.now(timezone.utc).isoformat()
         save_session(state)
+        mark_session_committed(user_id=state.user_id, plan=state.plan)
 
         return {
             "status": "ok",
