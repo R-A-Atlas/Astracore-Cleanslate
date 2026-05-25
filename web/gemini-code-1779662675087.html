@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-[#09090B] text-[#EAE6DF]">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AstraCore OS - Executive Terminal Command Board</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      letter-spacing: -0.01em;
+      background-color: #09090B;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    
+    /* Scrollbar termination for maximum display real estate scannability */
+    ::-webkit-scrollbar { display: none !important; }
+    * { scrollbar-width: none !important; -ms-overflow-style: none !important; }
+
+    /* Television Style Ambient Static LED Border Glow Panels */
+    .led-panel {
+      background: #0F0F12;
+      border: 1px solid rgba(234, 230, 223, 0.08);
+      box-shadow: 0 0 30px rgba(234, 230, 223, 0.02), inset 0 0 20px rgba(234, 230, 223, 0.01);
+      transition: all 0.4s ease;
+    }
+    .led-panel:hover {
+      border-color: rgba(234, 230, 223, 0.2);
+    }
+
+    /* Kinetic Scoring LED Status Indicators */
+    [data-led-glow="passing"] {
+      box-shadow: 0 0 35px rgba(78, 201, 164, 0.15), inset 0 0 15px rgba(78, 201, 164, 0.03);
+      border-color: rgba(78, 201, 164, 0.35) !important;
+    }
+    [data-led-glow="violation"] {
+      box-shadow: 0 0 35px rgba(224, 122, 108, 0.15), inset 0 0 15px rgba(224, 122, 108, 0.03);
+      border-color: rgba(224, 122, 108, 0.35) !important;
+    }
+
+    .nav-active {
+      background: #EAE6DF;
+      color: #09090B;
+      font-weight: 800;
+    }
+    .ticker-tab.active {
+      border-color: #EAE6DF;
+      background: rgba(234, 230, 223, 0.08);
+      color: #FFFFFF;
+    }
+
+    /* Tab panel active / inactive state indicators */
+    .tab-active {
+      background: rgba(234, 230, 223, 0.08);
+      color: #EAE6DF;
+      border-bottom: 2px solid #EAE6DF;
+    }
+    .tab-inactive { color: #6b7280; }
+    .tab-inactive:hover { color: #EAE6DF; }
+
+    /* Recording active — red pulse on studio frame */
+    [data-led-glow="recording"] {
+      box-shadow: 0 0 40px rgba(239, 68, 68, 0.25), inset 0 0 20px rgba(239, 68, 68, 0.05);
+      border-color: rgba(239, 68, 68, 0.5) !important;
+    }
+
+    /* Crimson failure pulse */
+    [data-led-glow="fail"] {
+      animation: crimson-pulse 2s ease-in-out infinite;
+      border-color: rgba(224, 100, 80, 0.6) !important;
+    }
+    @keyframes crimson-pulse {
+      0%,100% { box-shadow: 0 0 30px rgba(224,100,80,0.15), inset 0 0 15px rgba(224,100,80,0.03); }
+      50%      { box-shadow: 0 0 60px rgba(224,100,80,0.45), inset 0 0 30px rgba(224,100,80,0.12); }
+    }
+
+    /* Session status badges */
+    .status-badge {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 3px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .status-badge.processing { background: rgba(234,179,8,0.15); color: #eab308; border: 1px solid rgba(234,179,8,0.3); }
+    .status-badge.ready      { background: rgba(78,201,164,0.15); color: #4EC9A4; border: 1px solid rgba(78,201,164,0.3); }
+    .status-badge.failed     { background: rgba(239,68,68,0.15);  color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+
+    /* Studio failure banner */
+    .failure-banner {
+      display: none;
+      background: rgba(127,29,29,0.4);
+      border: 1px solid rgba(239,68,68,0.35);
+      border-radius: 6px;
+      padding: 12px 16px;
+    }
+    .failure-banner.visible { display: flex; }
+
+    /* Library export buttons */
+    .export-btn-primary {
+      background: #EAE6DF; color: #09090B;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 900;
+      padding: 8px 20px; border-radius: 4px; border: none; cursor: pointer;
+      transition: background 0.2s; letter-spacing: 0.06em;
+    }
+    .export-btn-primary:hover { background: #fff; }
+    .export-btn-secondary {
+      background: transparent; color: #9ca3af;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+      padding: 8px 20px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);
+      cursor: pointer; transition: all 0.2s; letter-spacing: 0.06em;
+    }
+    .export-btn-secondary:hover { border-color: rgba(255,255,255,0.3); color: #EAE6DF; }
+  </style>
+</head>
+<body class="h-full flex flex-col overflow-hidden text-[#EAE6DF]">
+
+  <header class="h-16 border-b border-white/5 bg-[#0F0F12] flex items-center justify-between px-8 z-50 shrink-0">
+    <div class="flex items-center gap-4">
+      <div class="w-3.5 h-3.5 bg-[#EAE6DF] rounded-sm shadow-[0_0_12px_#EAE6DF]"></div>
+      <div>
+        <span class="font-mono text-sm font-bold tracking-widest text-[#EAE6DF] block">ASTRACORE</span>
+        <span class="text-[11px] font-mono tracking-widest text-neutral-500 uppercase block font-bold">OPERATIONAL AUTOMATION ENGINE</span>
+      </div>
+    </div>
+
+    <nav class="flex items-center gap-1.5 bg-[#151518] p-1 rounded border border-white/5">
+      <button onclick="switchTerminalViewPanel('lobby')" id="nav-trigger-lobby" class="nav-active px-5 py-1.5 rounded font-mono text-xs tracking-wide transition-all">
+        OVERVIEW
+      </button>
+      <button onclick="switchTerminalViewPanel('studio')" id="nav-trigger-studio" class="text-neutral-400 hover:text-white px-5 py-1.5 rounded font-mono text-xs tracking-wide transition-all">
+        COCKPIT STUDIO
+      </button>
+      <button onclick="switchTerminalViewPanel('library')" id="nav-trigger-library" class="text-neutral-400 hover:text-white px-5 py-1.5 rounded font-mono text-xs tracking-wide transition-all flex items-center gap-2">
+        JOURNAL INDEX <span class="w-2 h-2 rounded-full bg-[#EAE6DF] inline-block animate-pulse"></span>
+      </button>
+    </nav>
+
+    <div class="flex items-center gap-6 font-mono text-xs font-bold text-neutral-400">
+      <div class="flex items-center gap-2">
+        <i data-lucide="cpu" class="w-4 h-4 text-neutral-400"></i>
+        <span>LOCAL CORE SHIELD ACTIVE</span>
+      </div>
+      <div class="text-white bg-white/5 px-3 py-1 rounded border border-white/5 font-bold">
+        ID: usr_912
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 relative overflow-hidden w-full">
+
+    <section id="terminal-panel-lobby" class="absolute inset-0 overflow-y-auto pt-24 pb-20 px-8 z-10">
+      <div class="w-full max-w-7xl mx-auto flex flex-col items-center justify-center text-center space-y-12">
+        
+        <div class="inline-flex items-center gap-3 px-4 py-2 bg-white/5 border border-white/10 rounded font-mono text-xs tracking-widest text-white font-bold">
+          <span class="w-2 h-2 rounded-full bg-white inline-block shadow-[0_0_8px_#fff]"></span>
+          <span>ATOMIC PIPELINE INTEGRITY: SYNCED TO LEDGER MUTEX</span>
+        </div>
+
+        <div class="space-y-6">
+          <h1 class="text-7xl sm:text-8xl md:text-9xl font-black tracking-tighter text-white uppercase leading-none">
+            THE ART OF <span class="font-light italic text-neutral-400 font-serif">RISK CONTROL</span>
+          </h1>
+          <p class="text-neutral-400 max-w-3xl mx-auto text-base tracking-wide leading-relaxed font-mono uppercase bg-[#111114] p-5 rounded border border-white/5 font-bold">
+            Screen and voice automation terminal designed for independent day operators. Record chart setups, extract technical rules, and isolate behavioral bugs cleanly.
+          </p>
+        </div>
+
+        <div class="flex items-center justify-center gap-3 py-1.5 bg-[#0F0F12] border border-white/5 px-2 rounded-full">
+          <button onclick="toggleLobbyTickerChip('NQ1!')" id="tk-nq-chip" class="ticker-tab active px-6 py-2 rounded-full font-mono text-xs font-bold text-neutral-400 hover:text-white">
+            NASDAQ: NQ1! [18842.25]
+          </button>
+          <button onclick="toggleLobbyTickerChip('BTCUSD')" id="tk-btc-chip" class="ticker-tab px-6 py-2 rounded-full font-mono text-xs font-bold text-neutral-400 hover:text-white">
+            BITCOIN: BTCUSD [68420.50]
+          </button>
+          <button onclick="toggleLobbyTickerChip('XAUUSD')" id="tk-xau-chip" class="ticker-tab px-6 py-2 rounded-full font-mono text-xs font-bold text-neutral-400 hover:text-white">
+            GOLD: XAUUSD [2412.80]
+          </button>
+        </div>
+
+        <div class="flex items-center justify-center gap-6 w-full max-w-md pt-4">
+          <button onclick="switchTerminalViewPanel('studio')" class="flex-1 py-4 bg-[#EAE6DF] text-[#09090B] font-mono text-sm font-black rounded tracking-wider transition-all hover:bg-white">
+            LAUNCH COCKPIT STUDIO
+          </button>
+          <button onclick="switchTerminalViewPanel('library')" class="flex-1 py-4 bg-transparent border border-white/20 text-white font-mono text-sm font-black rounded tracking-wider transition-all hover:border-white hover:bg-white/5">
+            OPEN ARCHIVE LIBRARY
+          </button>
+        </div>
+
+        <div class="w-full grid grid-cols-1 md:grid-cols-2 gap-8 pt-16 border-t border-white/5 mt-20 max-w-5xl">
+          <div class="led-panel p-8 rounded text-left flex flex-col justify-between space-y-6">
+            <div class="space-y-3">
+              <span class="font-mono text-xs text-neutral-500 font-bold block uppercase tracking-widest">TIER I // ARCHIVE MATRIX</span>
+              <h3 class="text-lg font-black font-mono text-white tracking-tight">THE STRATEGIC PLANNER</h3>
+              <div class="font-mono text-4xl font-light text-white">$49 <span class="text-xs text-neutral-500 font-bold">/ MONTH</span></div>
+              <p class="text-sm text-neutral-400 font-medium leading-relaxed">
+                Core narrative transcription translation models running alongside full access to our localized Pine Script v6 compiler sandbox architecture.
+              </p>
+            </div>
+            <div class="border-t border-white/5 pt-4 flex items-center justify-between font-mono text-xs font-bold text-neutral-300">
+              <span>LEDGER RESOURCE CEILING:</span>
+              <span class="text-white">20 COMPREHENSIVE WALKS / MO</span>
+            </div>
+          </div>
+
+          <div class="led-panel p-8 rounded text-left flex flex-col justify-between space-y-6">
+            <div class="space-y-3">
+              <span class="font-mono text-xs text-neutral-500 font-bold block uppercase tracking-widest">TIER II // HIGH FREQUENCY ACCELERATOR</span>
+              <h3 class="text-lg font-black font-mono text-white tracking-tight">THE HYPER-ACTIVE SCALPER</h3>
+              <div class="font-mono text-4xl font-light text-white">$129 <span class="text-xs text-neutral-500 font-bold">/ MONTH</span></div>
+              <p class="text-sm text-neutral-400 font-medium leading-relaxed">
+                Engineered specifically for active tape-readers. Process multi-session chart tracks simultaneously with automated queue intercept protection.
+              </p>
+            </div>
+            <div class="border-t border-white/5 pt-4 flex items-center justify-between font-mono text-xs font-bold text-neutral-300">
+              <span>LEDGER RESOURCE CEILING:</span>
+              <span class="text-white">60 COMPREHENSIVE WALKS / MO</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section id="terminal-panel-studio" class="absolute inset-0 hidden grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 overflow-hidden w-full">
+      <div class="lg:col-span-8 flex flex-col space-y-4 h-full min-h-0">
+        <div class="flex items-center justify-between shrink-0">
+          <div>
+            <h2 class="text-base font-black tracking-tight font-mono uppercase">STUDIO INGESTION VIEWPORT COCKPIT</h2>
+            <p class="text-xs text-neutral-500 font-mono font-bold uppercase">Zero-Latency Active Screen Capture</p>
+          </div>
+          <div class="font-mono text-sm px-4 py-1 bg-white/5 border border-white/10 rounded text-white font-bold flex items-center gap-3">
+            <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse block"></span>
+            <span id="studio-running-clock">00:00:00</span>
+          </div>
+        </div>
+
+        <div id="studio-display-glow-frame" data-led-glow="passing" class="led-panel flex-1 rounded overflow-hidden relative flex flex-col items-center justify-center bg-[#07070A]">
+          
+          <div id="studio-unbound-state-placeholder" class="absolute inset-0 flex flex-col items-center justify-center p-8 text-center bg-[#0C0C0F] z-20 space-y-6">
+            <div class="w-16 h-16 bg-white/5 border border-white/10 rounded-full flex items-center justify-center text-white">
+              <i data-lucide="tv" class="w-7 h-7"></i>
+            </div>
+            <div class="space-y-2">
+              <h3 class="font-mono font-bold text-sm text-white uppercase tracking-wider">No Display Input Ingress Bound</h3>
+              <p class="text-xs text-neutral-400 max-w-md mx-auto leading-relaxed">Bind your working charts monitor or specific window layout. The frame splitter utility captures screenshots locally every 5s for zero cost.</p>
+            </div>
+            <button onclick="bindDisplayStreamSource()" class="px-6 py-3 bg-[#EAE6DF] text-[#09090B] font-mono text-xs font-black rounded tracking-wide transition-all hover:bg-white">
+              CONNECT ACTIVE DISPLAY CHANNEL
+            </button>
+          </div>
+
+          <canvas id="studioLiveChartCanvas" class="w-full h-full object-cover opacity-35"></canvas>
+          
+          <div class="absolute bottom-4 left-4 z-30 bg-black/80 px-4 py-1.5 border border-white/10 text-white font-mono text-xs font-bold rounded flex items-center gap-2">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 block animate-ping"></span>
+            <span>PIPELINE ENVIRONMENT: ACTIVE UNIFIED FRAME</span>
+          </div>
+
+          <div class="absolute bottom-4 right-4 z-30 bg-black/90 px-4 py-2 border border-white/10 rounded flex items-center gap-4">
+            <div class="text-right font-mono">
+              <span class="text-[9px] text-neutral-500 font-bold block">NAR-AUDIO</span>
+              <span class="text-xs font-black text-white">INGRESS</span>
+            </div>
+            <canvas id="studioMicWaveformNode" class="w-20 h-8 border border-white/10 rounded bg-[#050507]"></canvas>
+          </div>
+        </div>
+
+        <div id="studio-failure-banner" class="failure-banner items-center justify-between shrink-0 gap-4">
+          <div class="flex items-center gap-3">
+            <i data-lucide="alert-triangle" class="w-4 h-4 text-red-400 shrink-0"></i>
+            <div>
+              <span class="text-red-400 font-mono text-xs font-black block">UPLOAD FAULT DETECTED</span>
+              <span id="failure-banner-msg" class="text-red-300/70 font-mono text-xs font-medium">Session data preserved. Check network connection.</span>
+            </div>
+          </div>
+          <button onclick="dismissFailureBanner()" class="text-red-400 hover:text-white font-mono text-xs font-bold px-3 py-1 border border-red-900/40 rounded hover:bg-red-900/30 transition-all shrink-0">
+            DISMISS
+          </button>
+        </div>
+
+        <div class="led-panel p-4 rounded flex items-center justify-between shrink-0">
+          <div class="flex items-center gap-4 font-mono text-xs">
+            <button onclick="toggleMicrophoneHardwareState()" id="mic-control-trigger" class="w-10 h-10 bg-white/5 border border-white/10 rounded flex items-center justify-center text-white hover:bg-white/10 transition-all">
+              <i data-lucide="mic" id="mic-dock-icon" class="w-4 h-4 text-white"></i>
+            </button>
+            <div>
+              <span class="text-neutral-500 font-bold uppercase block">Microphone Node</span>
+              <span id="mic-dock-status-label" class="text-neutral-300 font-medium">Click tool interface icon to arm hardware microphone channels</span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <button id="start-session-btn" onclick="startWalkthroughSession()" class="px-6 py-3 bg-red-600 text-white font-mono text-xs font-black rounded tracking-wide transition-all hover:bg-red-500">
+              START Walkthrough
+            </button>
+            <button id="stop-session-btn" onclick="stopAndCommit('manual')" class="px-6 py-3 bg-[#1E1E24] border border-white/10 text-white font-mono text-xs font-black rounded tracking-wide transition-all hover:bg-white/5">
+              STOP & COMMIT JOURNAL
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-4 flex flex-col space-y-4 h-full min-h-0 overflow-y-auto">
+        <div class="led-panel p-6 rounded space-y-6">
+          <div>
+            <span class="font-mono text-xs text-neutral-500 font-bold block uppercase tracking-widest">VARIABLE PARAMETERS</span>
+            <h3 class="text-base font-black font-mono text-white uppercase">Ledger Target Schema</h3>
+          </div>
+
+          <div class="space-y-4 font-mono text-xs">
+            <div class="space-y-2">
+              <label class="block text-neutral-400 font-bold uppercase">Active Strategy Group Name</label>
+              <input type="text" value="AstraCore Scalp Assist" class="w-full bg-[#050507] border border-white/10 rounded px-3 py-2.5 text-white font-bold" readonly />
+            </div>
+
+            <div class="space-y-2">
+              <label class="block text-neutral-400 font-bold uppercase">Pipeline Body Guardrails</label>
+              <div class="text-neutral-400 space-y-3 bg-white/5 p-4 rounded border border-white/5 font-medium leading-relaxed">
+                <p><span class="text-white font-bold">></span> Dynamic status queues protect asset writes from race conditions.</p>
+                <p><span class="text-white font-bold">></span> Session history limits tracking metadata context loops to a rolling 10 count.</p>
+                <p><span class="text-white font-bold">></span> Filenames are re-mapped to alpha strings to avoid special character crashes.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="led-panel p-4 rounded space-y-3 shrink-0">
+          <span class="font-mono text-xs text-neutral-500 font-bold block uppercase tracking-widest">SESSION PACKET QUEUE</span>
+          <div id="session-packet-list" class="space-y-0 max-h-36 overflow-y-auto font-mono text-xs text-neutral-500 italic">
+            No packets yet.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="terminal-panel-library" class="absolute inset-0 hidden flex gap-4 p-4 overflow-hidden w-full">
+      
+      <div id="library-left-panel" class="w-96 flex flex-col h-full min-h-0 bg-[#0B0B0D] border border-white/10 rounded p-4 space-y-4 shrink-0">
+        <div class="flex items-center justify-between border-b border-white/5 pb-4">
+          <div>
+            <span class="text-[10px] text-neutral-500 font-mono tracking-widest uppercase block font-bold">LEDGER REGISTRY</span>
+            <h2 class="text-sm font-black font-mono text-white uppercase">CAPTURE JOURNAL</h2>
+          </div>
+          <button onclick="toggleLibraryLeftPanel()" class="p-2 bg-white/5 border border-white/10 rounded hover:bg-white/10 text-white transition-all flex items-center justify-center">
+            <i data-lucide="chevrons-left" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <div class="relative font-mono text-xs">
+          <i data-lucide="search" class="absolute left-3 top-3 w-4 h-4 text-neutral-500"></i>
+          <input type="search" placeholder="Search archive logs..." class="w-full bg-[#050507] border border-white/10 rounded pl-9 pr-3 py-2.5 font-bold focus:outline-none focus:border-white text-white" />
+        </div>
+
+        <div class="flex-1 overflow-y-auto space-y-2 pr-1" id="library-journal-item-mount-node"></div>
+      </div>
+
+      <div id="library-right-panel" class="flex-1 flex flex-col h-full min-h-0 space-y-4">
+        
+        <div class="led-panel p-4 rounded flex items-center justify-between shrink-0">
+          <div class="flex items-center gap-4">
+            <button id="sidebar-restore-btn" onclick="toggleLibraryLeftPanel()" class="hidden p-2 bg-white/5 border border-white/10 rounded text-white hover:bg-white/10 transition-all flex items-center justify-center">
+              <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+            <div>
+              <h2 id="active-visor-title" class="text-sm font-black font-mono tracking-tight text-white uppercase">NQ Core Range Mid-point Breaker</h2>
+              <p id="active-visor-meta" class="text-xs font-mono text-neutral-500 font-bold">FILE STATUS: LOCKED IN SECURE DISK BACKEND</p>
+            </div>
+          </div>
+
+          <div id="library-television-led-frame" data-led-glow="passing" class="px-4 py-2 bg-black rounded text-center min-w-[8rem] border border-white/10">
+            <span class="text-[9px] text-neutral-500 font-mono font-bold block">EVAL STATUS</span>
+            <span id="active-visor-grade" class="text-xs font-black font-mono text-white block">GRADE A</span>
+          </div>
+        </div>
+
+        <div class="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 min-h-0 w-full">
+          
+          <div class="md:col-span-7 flex flex-col bg-[#050508] border border-white/10 rounded overflow-hidden min-h-0 relative">
+            <div class="p-3 border-b border-white/5 flex items-center justify-between text-xs font-mono font-bold text-neutral-400 bg-black/40">
+              <span>NARRATION FLOWBACK REVIEW VIEWER</span>
+              <span class="text-[10px] text-neutral-500 font-bold">WEBM PIPELINE</span>
+            </div>
+            
+            <div class="flex-1 bg-[#050507] relative flex flex-col items-center justify-center p-4">
+              <i data-lucide="clapperboard" class="w-8 h-8 text-neutral-400 mx-auto filter drop-shadow-[0_0_10px_#fff] mb-2"></i>
+              <p class="text-xs font-mono text-neutral-400 font-bold">LOCAL SESSION STREAM DISPLAY ARCHIVE</p>
+              <div class="absolute bottom-4 left-4 right-4 bg-white/5 h-1 rounded overflow-hidden"><div class="bg-[#EAE6DF] h-full w-[55%]"></div></div>
+            </div>
+
+            <div class="p-4 bg-white/[0.01] border-t border-white/5 flex items-center gap-3 font-mono text-xs">
+              <input type="text" id="rename-log-title-field" value="NQ Core Range Mid-point Breaker" class="flex-1 bg-black border border-white/10 rounded px-3 py-2 text-white focus:outline-none focus:border-white font-bold" />
+              <button onclick="commitJournalRenameAction()" class="px-4 py-2 bg-[#EAE6DF] text-black font-black rounded transition-all hover:bg-white">RENAME</button>
+              <button onclick="deleteJournalEntryAction()" class="px-4 py-2 bg-red-950/20 border border-red-900/30 text-red-400 font-bold rounded hover:bg-red-900/40 transition-all">DELETE</button>
+            </div>
+          </div>
+
+          <div class="md:col-span-5 flex flex-col bg-[#050508] border border-white/10 rounded overflow-hidden min-h-0">
+            <div class="flex border-b border-white/5 bg-black font-mono text-xs font-bold">
+              <button onclick="toggleVisorTabPanelState('artifacts')" id="tab-btn-artifacts" class="flex-1 py-3 text-center transition-all tab-active">[1. Strategy Exports]</button>
+              <button onclick="toggleVisorTabPanelState('consult')" id="tab-btn-consult" class="flex-1 py-3 text-center transition-all tab-inactive">[2. Jarvis Consult]</button>
+            </div>
+
+            <div class="flex-1 flex flex-col p-4 min-h-0 relative">
+              
+              <div id="panel-content-artifacts" class="absolute inset-0 p-4 overflow-y-auto space-y-4 flex flex-col font-mono text-xs">
+                <div class="bg-black border border-white/5 p-3 rounded space-y-1">
+                  <span class="text-[9px] text-neutral-500 font-bold block uppercase">NARRATION TRANSCRIPT LOG</span>
+                  <div id="visor-transcript-pane" class="text-neutral-300 font-medium leading-relaxed"></div>
+                </div>
+                <div class="bg-black border border-white/5 p-3 rounded space-y-1 flex-1 flex flex-col">
+                  <span class="text-[9px] text-neutral-500 font-bold block uppercase">AUTOGEN CODE OUTPUT (SANDBOX CHECKED)</span>
+                  <div class="flex-1 bg-[#050507] border border-white/5 p-2 rounded overflow-y-auto text-emerald-400 font-bold"><pre id="visor-code-pane"></pre></div>
+                </div>
+              </div>
+
+              <div id="panel-content-consult" class="absolute inset-0 p-4 hidden flex flex-col min-h-0 font-mono text-xs">
+                <div id="visor-chat-window-stream" class="flex-1 overflow-y-auto py-2 space-y-3 pr-1"></div>
+                <div class="pt-3 border-t border-white/5 flex items-center gap-3 shrink-0">
+                  <input type="text" id="consult-chat-line-input" onkeydown="catchConsultLineInputInputEnterKey(event)" placeholder="Ask Jarvis to query user profile variables..." class="flex-1 bg-black border border-white/10 rounded px-3 py-2.5 text-white focus:outline-none focus:border-white font-bold" />
+                  <button onclick="submitConsultQueryString()" class="px-5 py-2.5 bg-[#EAE6DF] text-black font-black rounded transition-all">SEND</button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+        <div class="led-panel p-3 rounded flex items-center justify-between shrink-0">
+          <div class="font-mono text-xs text-neutral-500 font-bold uppercase tracking-widest">SESSION EXPORT</div>
+          <div class="flex items-center gap-2">
+            <button onclick="exportSessionTranscript()" class="export-btn-secondary">TRANSCRIPT .TXT</button>
+            <button onclick="exportSessionCode()" class="export-btn-primary">STRATEGY .PINE</button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Global capture track registry — drained on all cleanup paths to prevent hardware leaks
+    window.activeCaptureTracks = [];
+
+    const systemStateMatrix = {
+      view: 'lobby', tab: 'artifacts', sidebarHidden: false, activeRowId: 'cap_101',
+      recordingActive: false, partIndex: 0, sessionId: null, operatorKey: 'usr_912',
+      entries: [
+        { id: 'cap_101', name: 'NQ Core Range Mid-point Breaker', date: 'May 23, 2:30 PM', grade: 'A', glow: 'passing', code: '//@version=6\nstrategy("PullbackBreakout", overlay=true)\nif (close > ta.ema(close, 200))\n    strategy.entry("L", strategy.long)', text: 'Price pulled back straight into the 21 period exponential moving average on the 5-minute chart. High volume support entered right at the lower range boundary.' },
+        { id: 'cap_102', name: 'BTC Consolidation Stop Grab', date: 'May 21, 9:12 AM', grade: 'F', glow: 'violation', code: '//@version=6\n// Strategy compliance failure flagged.\n// Premature position entry rule break.', text: 'Price broke the range low in an obvious hunt for liquidity. Placed market long order prematurely while the volume delta remained severely negative.' }
+      ]
+    };
+
+    // ── UUID — crypto.randomUUID() with RFC 4122 v4 fallback ─────────────────
+    function generateUUIDv4() {
+      if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+      });
+    }
+
+    // ── Panel router — nav intercept auto-commits active recording ────────────
+    function switchTerminalViewPanel(viewKey) {
+      if (systemStateMatrix.recordingActive && viewKey !== 'studio') stopAndCommit('nav');
+      systemStateMatrix.view = viewKey;
+      ['lobby', 'studio', 'library'].forEach(p => {
+        document.getElementById(`nav-trigger-${p}`).className = p === viewKey
+          ? 'nav-active px-5 py-1.5 rounded font-mono text-xs tracking-wide transition-all'
+          : 'text-neutral-400 hover:text-white px-5 py-1.5 rounded font-mono text-xs tracking-wide transition-all';
+        document.getElementById(`terminal-panel-${p}`).classList.toggle('hidden', p !== viewKey);
+      });
+      if (viewKey === 'library') { renderCaptureJournalRows(); loadTargetJournalLog(systemStateMatrix.activeRowId); }
+    }
+
+    // ── beforeunload emergency flush — stops hardware, requests final chunk ───
+    window.addEventListener('beforeunload', (event) => {
+      if (systemStateMatrix.recordingActive) { stopAndCommit('unload'); event.returnValue = ''; }
+    });
+
+    // ── Display capture — getDisplayMedia, 5 fps, draws to canvas ────────────
+    async function bindDisplayStreamSource() {
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 5, cursor: 'always' }, audio: false });
+        window.activeCaptureTracks.push(...stream.getTracks());
+        document.getElementById('studio-unbound-state-placeholder').classList.add('hidden');
+        const video = document.createElement('video');
+        video.srcObject = stream; video.muted = true; video.play().catch(() => {});
+        const canvas = document.getElementById('studioLiveChartCanvas');
+        const ctx = canvas.getContext('2d');
+        video.addEventListener('loadedmetadata', () => { canvas.width = video.videoWidth || 1280; canvas.height = video.videoHeight || 720; });
+        const drawLoop = setInterval(() => { if (video.readyState >= 2) ctx.drawImage(video, 0, 0, canvas.width, canvas.height); }, 200);
+        stream.getTracks()[0].addEventListener('ended', () => {
+          clearInterval(drawLoop);
+          document.getElementById('studio-unbound-state-placeholder').classList.remove('hidden');
+          window.activeCaptureTracks = window.activeCaptureTracks.filter(t => t.readyState === 'live');
+        });
+      } catch (err) { console.error('Display capture failed:', err.message); }
+    }
+
+    // ── Codec negotiation — VP9 → H264 → webm → opus fallback ───────────────
+    function _negotiateCodec() {
+      return ['video/webm;codecs=vp9', 'video/webm;codecs=h264', 'video/webm', 'audio/webm;codecs=opus'].find(c => MediaRecorder.isTypeSupported(c)) || '';
+    }
+
+    // ── Microphone toggle ─────────────────────────────────────────────────────
+    let _micStream = null;
+    async function toggleMicrophoneHardwareState() {
+      const btn = document.getElementById('mic-control-trigger');
+      const label = document.getElementById('mic-dock-status-label');
+      if (_micStream) {
+        _micStream.getTracks().forEach(t => t.stop());
+        window.activeCaptureTracks = window.activeCaptureTracks.filter(t => t.readyState === 'live');
+        _micStream = null;
+        label.textContent = 'Click tool interface icon to arm hardware microphone channels';
+        btn.classList.remove('bg-red-600/20', 'border-red-500/40');
+        return;
+      }
+      try {
+        _micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        window.activeCaptureTracks.push(..._micStream.getTracks());
+        label.textContent = 'MICROPHONE ARMED — Audio ingress active';
+        btn.classList.add('bg-red-600/20', 'border-red-500/40');
+      } catch (err) { label.textContent = `Mic access denied: ${err.message}`; }
+    }
+
+    // ── Recording start ───────────────────────────────────────────────────────
+    let _mediaRecorder = null;
+    let _timerInterval = null;
+    let _sessionStartMs = 0;
+
+    async function startWalkthroughSession() {
+      if (systemStateMatrix.recordingActive) return;
+      if (!window.activeCaptureTracks.some(t => t.kind === 'video' && t.readyState === 'live')) {
+        await bindDisplayStreamSource();
+      }
+      const videoTracks = window.activeCaptureTracks.filter(t => t.kind === 'video' && t.readyState === 'live');
+      if (videoTracks.length === 0) return;
+
+      const stream = new MediaStream(videoTracks);
+      if (_micStream) _micStream.getTracks().forEach(t => stream.addTrack(t));
+
+      const mimeType = _negotiateCodec();
+      const recOpts = { videoBitsPerSecond: 1_200_000 };
+      if (mimeType) recOpts.mimeType = mimeType;
+
+      systemStateMatrix.sessionId = generateUUIDv4();
+      systemStateMatrix.partIndex = 0;
+      systemStateMatrix.recordingActive = true;
+
+      // Clear stale placeholder text from packet queue
+      const pktList = document.getElementById('session-packet-list');
+      if (pktList) pktList.innerHTML = '';
+
+      _mediaRecorder = new MediaRecorder(stream, recOpts);
+      _mediaRecorder.ondataavailable = async (e) => {
+        if (e.data && e.data.size > 0) {
+          systemStateMatrix.partIndex++;
+          const num  = String(systemStateMatrix.partIndex).padStart(2, '0');
+          const name = `part_${num}_${systemStateMatrix.operatorKey}.webm`;
+          await _uploadPart(e.data, name);
+        }
+      };
+      _mediaRecorder.onstop = () => {
+        systemStateMatrix.recordingActive = false;
+        _updateStartStopButtons(false);
+        const hasFail = document.getElementById('studio-failure-banner')?.classList.contains('visible');
+        if (!hasFail) document.getElementById('studio-display-glow-frame').setAttribute('data-led-glow', 'passing');
+      };
+
+      _mediaRecorder.start(900_000); // 15-minute time-sliced blobs
+      document.getElementById('studio-display-glow-frame').setAttribute('data-led-glow', 'recording');
+      _updateStartStopButtons(true);
+      _startSessionTimer();
+    }
+
+    // ── Part upload — adds status badge row per chunk ─────────────────────────
+    async function _uploadPart(blob, filename) {
+      _addSessionPacketRow(filename, 'processing');
+      try {
+        const form = new FormData();
+        form.append('file', blob, filename);
+        form.append('session_id', systemStateMatrix.sessionId);
+        form.append('operator_key', systemStateMatrix.operatorKey);
+        const res = await fetch('/api/upload/part', { method: 'POST', body: form });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        _updateSessionPacketRow(filename, 'ready');
+      } catch (err) {
+        _updateSessionPacketRow(filename, 'failed', err.message);
+        _showFailureBanner(err.message);
+      }
+    }
+
+    function _addSessionPacketRow(filename, status) {
+      const list = document.getElementById('session-packet-list'); if (!list) return;
+      const div = document.createElement('div');
+      div.id = `pkt-${filename}`;
+      div.className = 'flex items-center justify-between py-1.5 border-b border-white/5';
+      div.innerHTML = `<span class="font-mono text-xs text-neutral-400 font-bold truncate max-w-[60%]">${filename}</span><span id="badge-${filename}" class="status-badge ${status}">${status.toUpperCase()}</span>`;
+      list.prepend(div);
+    }
+
+    function _updateSessionPacketRow(filename, status, errMsg) {
+      const badge = document.getElementById(`badge-${filename}`); if (!badge) return;
+      badge.className = `status-badge ${status}`;
+      badge.textContent = errMsg ? `FAILED: ${errMsg.slice(0, 28)}` : status.toUpperCase();
+    }
+
+    function _showFailureBanner(msg) {
+      const banner = document.getElementById('studio-failure-banner'); if (!banner) return;
+      const msgEl = document.getElementById('failure-banner-msg');
+      if (msgEl) msgEl.textContent = msg || 'Upload failed. Session data preserved locally.';
+      banner.classList.add('visible');
+      document.getElementById('studio-display-glow-frame').setAttribute('data-led-glow', 'fail');
+    }
+
+    function dismissFailureBanner() {
+      const banner = document.getElementById('studio-failure-banner'); if (banner) banner.classList.remove('visible');
+      if (!systemStateMatrix.recordingActive) document.getElementById('studio-display-glow-frame').setAttribute('data-led-glow', 'passing');
+    }
+
+    function _updateStartStopButtons(isRecording) {
+      const startBtn = document.getElementById('start-session-btn');
+      const stopBtn  = document.getElementById('stop-session-btn');
+      if (!startBtn || !stopBtn) return;
+      startBtn.disabled = isRecording;
+      startBtn.className = isRecording
+        ? 'px-6 py-3 bg-red-900/40 text-red-700 font-mono text-xs font-black rounded tracking-wide cursor-not-allowed'
+        : 'px-6 py-3 bg-red-600 text-white font-mono text-xs font-black rounded tracking-wide transition-all hover:bg-red-500';
+      stopBtn.className = isRecording
+        ? 'px-6 py-3 bg-white text-[#09090B] font-mono text-xs font-black rounded tracking-wide transition-all hover:bg-[#EAE6DF]'
+        : 'px-6 py-3 bg-[#1E1E24] border border-white/10 text-white font-mono text-xs font-black rounded tracking-wide transition-all hover:bg-white/5';
+    }
+
+    function _startSessionTimer() {
+      _sessionStartMs = Date.now();
+      clearInterval(_timerInterval);
+      _timerInterval = setInterval(() => {
+        const ms = Date.now() - _sessionStartMs;
+        const h  = String(Math.floor(ms / 3_600_000)).padStart(2, '0');
+        const m  = String(Math.floor((ms % 3_600_000) / 60_000)).padStart(2, '0');
+        const s  = String(Math.floor((ms % 60_000) / 1_000)).padStart(2, '0');
+        const el = document.getElementById('studio-running-clock');
+        if (el) el.textContent = `${h}:${m}:${s}`;
+      }, 1000);
+    }
+
+    // ── Stop & commit — drains all tracks, routes to library ─────────────────
+    function stopAndCommit(trigger) {
+      if (_mediaRecorder && _mediaRecorder.state !== 'inactive') {
+        _mediaRecorder.requestData(); // flush current partial chunk
+        _mediaRecorder.stop();
+      }
+      clearInterval(_timerInterval);
+      window.activeCaptureTracks.forEach(t => t.stop());
+      window.activeCaptureTracks = [];
+      _micStream = null;
+      systemStateMatrix.recordingActive = false;
+      if (trigger !== 'unload') switchTerminalViewPanel('library');
+    }
+
+    // ── Library sidebar ───────────────────────────────────────────────────────
+    function toggleLibraryLeftPanel() {
+      const pane = document.getElementById('library-left-panel');
+      const restoreTrigger = document.getElementById('sidebar-restore-btn');
+      systemStateMatrix.sidebarHidden = !systemStateMatrix.sidebarHidden;
+      pane.style.display = systemStateMatrix.sidebarHidden ? 'none' : 'flex';
+      restoreTrigger.classList.toggle('hidden', !systemStateMatrix.sidebarHidden);
+    }
+
+    // ── Journal rendering ─────────────────────────────────────────────────────
+    function renderCaptureJournalRows() {
+      document.getElementById('library-journal-item-mount-node').innerHTML = systemStateMatrix.entries.map(row => {
+        return `<button onclick="loadTargetJournalLog('${row.id}')" class="w-full flex items-start gap-3 p-3 rounded border text-left font-mono text-xs ${row.id === systemStateMatrix.activeRowId ? 'bg-white/5 border-white/30 shadow-[0_0_10px_rgba(255,255,255,0.05)]' : 'bg-transparent border-transparent hover:bg-white/[0.02]'}">
+          <div class="min-w-0 flex-1 space-y-0.5">
+            <div class="text-white font-bold truncate">${row.name}</div>
+            <div class="text-[10px] text-neutral-500 flex justify-between font-bold"><span>${row.date}</span><span class="${row.glow === 'passing' ? 'text-emerald-400' : 'text-red-400'}">GRADE ${row.grade}</span></div>
+          </div>
+        </button>`;
+      }).join('');
+    }
+
+    function loadTargetJournalLog(id) {
+      systemStateMatrix.activeRowId = id;
+      const data = systemStateMatrix.entries.find(e => e.id === id); if (!data) return;
+      document.getElementById('active-visor-title').textContent = data.name;
+      document.getElementById('rename-log-title-field').value = data.name;
+      document.getElementById('library-television-led-frame').setAttribute('data-led-glow', data.glow);
+      document.getElementById('active-visor-grade').textContent = `GRADE ${data.grade}`;
+      document.getElementById('visor-transcript-pane').textContent = data.text;
+      document.getElementById('visor-code-pane').textContent = data.code;
+    }
+
+    // ── Tab switching ─────────────────────────────────────────────────────────
+    function toggleVisorTabPanelState(tab) {
+      systemStateMatrix.tab = tab;
+      document.getElementById('tab-btn-artifacts').className = tab === 'artifacts' ? 'flex-1 py-3 text-center transition-all tab-active' : 'flex-1 py-3 text-center transition-all tab-inactive';
+      document.getElementById('tab-btn-consult').className   = tab === 'consult'   ? 'flex-1 py-3 text-center transition-all tab-active' : 'flex-1 py-3 text-center transition-all tab-inactive';
+      document.getElementById('panel-content-artifacts').classList.toggle('hidden', tab !== 'artifacts');
+      document.getElementById('panel-content-consult').classList.toggle('hidden', tab !== 'consult');
+    }
+
+    // ── Journal CRUD ──────────────────────────────────────────────────────────
+    function commitJournalRenameAction() {
+      const str = document.getElementById('rename-log-title-field').value.trim(); if (!str) return;
+      const match = systemStateMatrix.entries.find(e => e.id === systemStateMatrix.activeRowId);
+      if (match) { match.name = str; document.getElementById('active-visor-title').textContent = str; renderCaptureJournalRows(); }
+    }
+
+    function deleteJournalEntryAction() {
+      systemStateMatrix.entries = systemStateMatrix.entries.filter(e => e.id !== systemStateMatrix.activeRowId);
+      if (systemStateMatrix.entries.length > 0) { systemStateMatrix.activeRowId = systemStateMatrix.entries[0].id; loadTargetJournalLog(systemStateMatrix.activeRowId); }
+      renderCaptureJournalRows();
+    }
+
+    // ── Export actions (library) ──────────────────────────────────────────────
+    function exportSessionTranscript() {
+      const entry = systemStateMatrix.entries.find(e => e.id === systemStateMatrix.activeRowId); if (!entry) return;
+      _triggerDownload(new Blob([entry.text], { type: 'text/plain' }), `${entry.name.replace(/\s+/g, '-')}_transcript.txt`);
+    }
+
+    function exportSessionCode() {
+      const entry = systemStateMatrix.entries.find(e => e.id === systemStateMatrix.activeRowId); if (!entry) return;
+      _triggerDownload(new Blob([entry.code], { type: 'text/plain' }), `${entry.name.replace(/\s+/g, '-')}_strategy.pine`);
+    }
+
+    function _triggerDownload(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    // ── Jarvis consult ────────────────────────────────────────────────────────
+    function submitConsultQueryString() {
+      const field = document.getElementById('consult-chat-line-input'); const query = field.value.trim(); if (!query) return;
+      const stream = document.getElementById('visor-chat-window-stream');
+      stream.innerHTML += `<div class="text-right ml-auto space-y-1"><span class="text-[9px] text-neutral-500 block font-bold">OPERATOR PROBE //</span><div class="bg-white/5 border border-white/10 p-2 rounded text-white text-left inline-block">${query}</div></div>`;
+      field.value = ''; stream.scrollTop = stream.scrollHeight;
+      setTimeout(() => {
+        stream.innerHTML += `<div class="space-y-1 mt-2"><span class="text-[9px] text-neutral-500 font-bold block">JARVIS COGNITIVE RESPONSE</span><div class="bg-black border border-white/5 p-3 rounded text-neutral-400">Interrogated historical profile records inside usr_912_ledger.json variables. Parameter strings verified compliant.</div></div>`;
+        stream.scrollTop = stream.scrollHeight;
+      }, 750);
+    }
+    function catchConsultLineInputInputEnterKey(e) { if (e.key === 'Enter') submitConsultQueryString(); }
+
+    // ── Lobby ticker chips ────────────────────────────────────────────────────
+    function toggleLobbyTickerChip(sym) {
+      const map = { 'NQ1!': 'tk-nq-chip', 'BTCUSD': 'tk-btc-chip', 'XAUUSD': 'tk-xau-chip' };
+      Object.entries(map).forEach(([s, id]) => document.getElementById(id).classList.toggle('active', s === sym));
+    }
+
+    // ── Initialization ────────────────────────────────────────────────────────
+    window.onload = function() {
+      switchTerminalViewPanel('lobby');
+      lucide.createIcons();
+      const canvas = document.getElementById('studioMicWaveformNode');
+      const ctx    = canvas.getContext('2d');
+      setInterval(() => {
+        if (systemStateMatrix.view !== 'studio') return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'rgba(234, 230, 223, 0.2)';
+        for (let i = 0; i < 8; i++) { const h = Math.random() * canvas.height * 0.75; ctx.fillRect(i * 9 + 4, canvas.height - h, 5, h); }
+      }, 90);
+    };
+  </script>
+</body>
+</html>

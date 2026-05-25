@@ -1,0 +1,10 @@
+{
+  "user_token": "usr_DEFAULT_TEMPLATE",
+  "established_rules": [],
+  "behavioral_patterns": [],
+  "historical_mistakes": [],
+  "indicator_inventory": {
+    "max_allowed_indicators": 2,
+    "version_lock": "pine_v6"
+  }
+}

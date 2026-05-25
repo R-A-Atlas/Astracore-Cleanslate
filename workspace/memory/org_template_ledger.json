@@ -1,0 +1,14 @@
+{
+  "org_token": "org_DEFAULT_TEMPLATE",
+  "company_name": "UNASSIGNED",
+  "max_seats": 8,
+  "allocated_monthly_sessions": 200,
+  "sessions_consumed_this_month": 0,
+  "shared_firm_rules": [],
+  "aggregate_firm_mistakes": [],
+  "active_operators": {},
+  "indicator_inventory": {
+    "max_allowed_indicators": 2,
+    "version_lock": "pine_v6"
+  }
+}
