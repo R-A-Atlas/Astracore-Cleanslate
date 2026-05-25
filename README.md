@@ -76,3 +76,23 @@ Ops baseline is now restart-safe and log-safe:
 Startup/runtime directories now also include:
 - `workspace/ops`
 - `workspace/logs`
+
+## Security guardrails (P0-9)
+Baseline protection for internal operations is now active:
+- `/ops/*` endpoints require header auth:
+  - header: `x-ops-token`
+  - token source env: `ASTRACORE_OPS_TOKEN`
+  - default local fallback: `dev-ops-token` (change this in real deployment)
+- Sensitive write endpoints now have per-IP rate limiting (rolling 60s window):
+  - `/api/session/start`
+  - `/api/session/stop-commit`
+  - `/api/upload/part`
+
+Rate-limit envs:
+- `ASTRACORE_RATE_LIMIT_PER_MIN` (default: `60`)
+
+Quick ops auth check:
+```bash
+curl -i http://localhost:8080/ops/metrics
+curl -i -H "x-ops-token: dev-ops-token" http://localhost:8080/ops/metrics
+```
