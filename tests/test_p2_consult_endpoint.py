@@ -41,6 +41,7 @@ def test_session_consult_reads_fusion_and_filters_matches():
                 "include_follow_through": "true",
                 "follow_through_window_ms": 1500,
                 "follow_through_min_confidence": 0.7,
+                "follow_through_signal_types": "task_completed,status_change",
                 "debug": "true",
                 "limit": 1,
                 "offset": 0,
@@ -94,6 +95,7 @@ def test_session_consult_reads_fusion_and_filters_matches():
     assert body_or["filters"]["min_follow_through_score"] == 0
     assert body_or["filters"]["follow_through_window_ms"] == 1500
     assert body_or["filters"]["follow_through_min_confidence"] == 0.7
+    assert body_or["filters"]["follow_through_signal_types"] == ["status_change", "task_completed"]
     assert body_or["filters"]["include_follow_through"] is True
     assert body_or["filters"]["include_context"] is True
     assert body_or["filters"]["debug"] is True
@@ -111,11 +113,13 @@ def test_session_consult_reads_fusion_and_filters_matches():
     assert "follow_through_stats" in body_or
     assert body_or["follow_through_stats"]["max_score"] >= body_or["follow_through_stats"]["avg_score"]
     assert body_or["follow_through_stats"]["signal_count"] >= 1
-    assert body_or["follow_through_stats"]["signal_type_counts"]["task_created"] >= 1
+    assert body_or["follow_through_stats"]["signal_type_counts"]["task_completed"] >= 1
+    assert body_or["follow_through_stats"]["signal_type_counts"]["task_created"] == 0
     assert body_or["matches"][0]["follow_through"]["score"] > 0
     ft_signals = body_or["matches"][0]["follow_through"]["signals"]
     assert ft_signals == sorted(ft_signals, key=lambda s: s["epoch_ms"])
     assert all(float(s["confidence"]) >= 0.7 for s in ft_signals)
+    assert all(str(s["signal_type"]) in {"task_completed", "status_change"} for s in ft_signals)
 
     assert res_page2.status_code == 200
     body_p2 = res_page2.json()
@@ -153,7 +157,7 @@ def test_session_consult_reads_fusion_and_filters_matches():
     assert body_and["filters"]["row_type"] == "transcript"
 
 
-def test_session_consult_rejects_bad_row_type_empty_query_bad_mode_bad_sort_bad_fields_bad_min_token_hits_bad_min_coverage_pct_bad_score_bad_min_follow_through_score_bad_follow_through_window_bad_follow_through_min_confidence_and_bad_offset():
+def test_session_consult_rejects_bad_row_type_empty_query_bad_mode_bad_sort_bad_fields_bad_min_token_hits_bad_min_coverage_pct_bad_score_bad_min_follow_through_score_bad_follow_through_window_bad_follow_through_min_confidence_bad_follow_through_signal_types_and_bad_offset():
     fusion_path = Path("workspace/memory/intel/u_consult__s2__fusion_timeline.json")
     fusion_path.parent.mkdir(parents=True, exist_ok=True)
     fusion_path.write_text(json.dumps({"timeline_rows": []}))
@@ -203,6 +207,10 @@ def test_session_consult_rejects_bad_row_type_empty_query_bad_mode_bad_sort_bad_
             "/api/session/s2/consult",
             params={"user_id": "u_consult", "query": "x y", "follow_through_min_confidence": "1.2"},
         )
+        bad_follow_through_signal_types = c.get(
+            "/api/session/s2/consult",
+            params={"user_id": "u_consult", "query": "x y", "follow_through_signal_types": "task_created,invalid"},
+        )
         bad_offset = c.get(
             "/api/session/s2/consult",
             params={"user_id": "u_consult", "query": "x y", "offset": "-1"},
@@ -219,6 +227,7 @@ def test_session_consult_rejects_bad_row_type_empty_query_bad_mode_bad_sort_bad_
     assert bad_min_follow_through_score.status_code == 400
     assert bad_follow_through_window.status_code == 400
     assert bad_follow_through_min_confidence.status_code == 400
+    assert bad_follow_through_signal_types.status_code == 400
     assert bad_offset.status_code == 400
 
 
