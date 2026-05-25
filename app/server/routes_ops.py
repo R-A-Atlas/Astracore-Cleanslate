@@ -1,6 +1,10 @@
+import os
+
 from fastapi import APIRouter
 
 from app.core.ops_observability import RECENT_ERRORS, RECENT_REQUESTS, get_ops_metrics
+from app.core.security_guardrails import OPS_TOKEN_HEADER, RATE_LIMIT_PER_MIN, RATE_LIMIT_WINDOW_SEC
+from app.core.settings import load_runtime_settings
 from app.server.state import SESSIONS
 
 router = APIRouter(prefix="/ops", tags=["ops"])
@@ -21,6 +25,26 @@ async def ops_status():
 @router.get("/metrics")
 async def ops_metrics():
     return get_ops_metrics()
+
+
+@router.get("/config")
+async def ops_config():
+    runtime = load_runtime_settings()
+    token = os.getenv("ASTRACORE_OPS_TOKEN", "").strip()
+    return {
+        "app": {
+            "port": runtime.port,
+            "environment": runtime.environment,
+        },
+        "ops_auth": {
+            "header": OPS_TOKEN_HEADER,
+            "token_configured": bool(token),
+        },
+        "rate_limit": {
+            "sensitive_endpoints_per_min": RATE_LIMIT_PER_MIN,
+            "window_seconds": RATE_LIMIT_WINDOW_SEC,
+        },
+    }
 
 
 @router.get("/recent-requests")

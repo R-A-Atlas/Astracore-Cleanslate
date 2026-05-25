@@ -63,6 +63,7 @@ New ops endpoints:
 - `GET /ops/recent-requests?limit=50` → rolling request log window
 - `GET /ops/recent-errors?limit=20` → failed sessions + request exceptions
 - `GET /ops/status` → session status summary + embedded metrics
+- `GET /ops/config` → sanitized active runtime/security config (no secrets)
 
 ## Persistence hardening (P0-8)
 Ops baseline is now restart-safe and log-safe:
