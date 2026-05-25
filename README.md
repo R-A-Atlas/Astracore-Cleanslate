@@ -64,6 +64,7 @@ New ops endpoints:
 - `GET /ops/throughput-trend?window_min=15` → request throughput/error-rate trend window
 - `GET /ops/alerts?window_min=15` → alert state from error-rate + queue-depth thresholds
 - `GET /ops/alerts/health?window_min=15` → monitor-friendly health probe (`200` when alert level is `ok`, else `503`)
+- `GET /ops/alerts/healthz?window_min=15` → plain-text probe (`ok` / `degraded`) for simple health-check systems
 - `GET /ops/recent-requests?limit=50` → rolling request log window
 - `GET /ops/recent-errors?limit=20` → failed sessions + request exceptions
 - `GET /ops/config` → sanitized runtime/security config (no secrets)

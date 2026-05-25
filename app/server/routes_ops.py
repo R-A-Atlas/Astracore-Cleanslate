@@ -143,6 +143,14 @@ async def ops_alerts_health(window_min: int = 15):
     )
 
 
+@router.get("/alerts/healthz")
+async def ops_alerts_healthz(window_min: int = 15):
+    alerts = await ops_alerts(window_min=window_min)
+    status_code = 200 if alerts.get("level") == "ok" else 503
+    body = "ok" if status_code == 200 else "degraded"
+    return Response(content=body, status_code=status_code, media_type="text/plain")
+
+
 @router.get("/config")
 async def ops_config():
     runtime = load_runtime_settings()
