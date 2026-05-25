@@ -116,3 +116,19 @@ bash scripts/ops_alert_healthz_check.sh http://127.0.0.1:8080
 ```
 - returns exit `0` when healthy (`ok`)
 - returns exit `1` when degraded (`warning/critical`)
+
+## P2-1 transcript artifact contract
+On successful `/api/session/stop-commit`, response now includes:
+- `transcript_path`
+
+Transcript artifact file is written at:
+- `workspace/memory/intel/<user_id>__<session_id>__transcript.json`
+
+Payload includes:
+- `generated_at`
+- `user_id`
+- `session_id`
+- `provider`
+- `audio_path`
+- `segment_count`
+- `segments`

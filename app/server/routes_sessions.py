@@ -13,7 +13,7 @@ from app.intel.behavior_tags import infer_behavior_tags
 from app.intel.event_extractor import build_event_rows
 from app.intel.frame_ocr import extract_frame_events
 from app.intel.session_summary import build_session_summary
-from app.intel.store import save_summary
+from app.intel.store import save_summary, save_transcript
 from app.intel.transcription import transcribe_audio
 from app.core.checksum import verify_timeline_alignment
 from app.core.incidents import write_failure_incident_bundle
@@ -134,6 +134,13 @@ async def session_stop_commit(payload: SessionStopCommitRequest):
                 if audio_path
                 else []
             )
+            transcript_path = save_transcript(
+                payload.user_id,
+                payload.session_id,
+                audio_path=audio_path,
+                segments=transcript_segments,
+                provider="local_stub",
+            )
             frame_events = _run_sync_with_retries(
                 lambda: extract_frame_events(frame_paths),
                 attempts=STOP_COMMIT_RETRY_ATTEMPTS,
@@ -169,6 +176,7 @@ async def session_stop_commit(payload: SessionStopCommitRequest):
                 "audio": state.audio_path,
                 "frame_count": state.frame_count,
                 "summary_path": summary_path,
+                "transcript_path": transcript_path,
                 "daily_review_path": daily_review_path,
                 "behavior_tags": behavior_tags,
             }
