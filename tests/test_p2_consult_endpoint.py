@@ -32,6 +32,7 @@ def test_session_consult_reads_fusion_and_filters_matches():
                 "sort": "score_desc",
                 "fields": "text",
                 "min_token_hits": 2,
+                "min_coverage_pct": 100,
                 "row_type": "transcript",
                 "start_epoch_ms": 1000,
                 "min_score": 20,
@@ -71,6 +72,7 @@ def test_session_consult_reads_fusion_and_filters_matches():
     assert body_or["filters"]["sort"] == "score_desc"
     assert body_or["filters"]["fields"] == ["text"]
     assert body_or["filters"]["min_token_hits"] == 2
+    assert body_or["filters"]["min_coverage_pct"] == 100
     assert body_or["filters"]["min_score"] == 20
     assert body_or["filters"]["include_context"] is True
     assert "context" in body_or["matches"][0]
@@ -97,7 +99,7 @@ def test_session_consult_reads_fusion_and_filters_matches():
     assert body_and["filters"]["row_type"] == "transcript"
 
 
-def test_session_consult_rejects_bad_row_type_empty_query_bad_mode_bad_sort_bad_fields_bad_min_token_hits_bad_score_and_bad_offset():
+def test_session_consult_rejects_bad_row_type_empty_query_bad_mode_bad_sort_bad_fields_bad_min_token_hits_bad_min_coverage_pct_bad_score_and_bad_offset():
     fusion_path = Path("workspace/memory/intel/u_consult__s2__fusion_timeline.json")
     fusion_path.parent.mkdir(parents=True, exist_ok=True)
     fusion_path.write_text(json.dumps({"timeline_rows": []}))
@@ -127,6 +129,10 @@ def test_session_consult_rejects_bad_row_type_empty_query_bad_mode_bad_sort_bad_
             "/api/session/s2/consult",
             params={"user_id": "u_consult", "query": "x y", "min_token_hits": "0"},
         )
+        bad_min_coverage_pct = c.get(
+            "/api/session/s2/consult",
+            params={"user_id": "u_consult", "query": "x y", "min_coverage_pct": "120"},
+        )
         bad_score = c.get(
             "/api/session/s2/consult",
             params={"user_id": "u_consult", "query": "x y", "min_score": "999"},
@@ -142,6 +148,7 @@ def test_session_consult_rejects_bad_row_type_empty_query_bad_mode_bad_sort_bad_
     assert bad_sort.status_code == 400
     assert bad_fields.status_code == 400
     assert bad_min_token_hits.status_code == 400
+    assert bad_min_coverage_pct.status_code == 400
     assert bad_score.status_code == 400
     assert bad_offset.status_code == 400
 

@@ -270,6 +270,7 @@ async def session_consult(
     sort: str = "score_desc",
     fields: str | None = None,
     min_token_hits: int = 1,
+    min_coverage_pct: float = 0.0,
     min_score: int = 0,
     include_context: bool = False,
     row_type: str | None = None,
@@ -299,6 +300,8 @@ async def session_consult(
         raise HTTPException(status_code=400, detail="min_score must be between 0 and 200")
     if min_token_hits < 1 or min_token_hits > 20:
         raise HTTPException(status_code=400, detail="min_token_hits must be between 1 and 20")
+    if min_coverage_pct < 0 or min_coverage_pct > 100:
+        raise HTTPException(status_code=400, detail="min_coverage_pct must be between 0 and 100")
 
     allowed_search_fields = {"text", "event", "frame", "source"}
     selected_fields = allowed_search_fields
@@ -341,7 +344,10 @@ async def session_consult(
             continue
 
         matched_tokens = [tok for tok in tokens if tok in blob]
+        matched_coverage_pct = round((len(matched_tokens) / len(tokens)) * 100, 2) if tokens else 0.0
         if len(matched_tokens) < min_token_hits:
+            continue
+        if matched_coverage_pct < min_coverage_pct:
             continue
         score, matched_field, matched_snippet = _score_match(row, tokens, selected_fields)
         if score <= 0 or score < min_score:
@@ -411,6 +417,7 @@ async def session_consult(
             "sort": sort_mode,
             "fields": sorted(selected_fields),
             "min_token_hits": min_token_hits,
+            "min_coverage_pct": min_coverage_pct,
             "min_score": min_score,
             "include_context": include_context,
             "row_type": allowed_type,
