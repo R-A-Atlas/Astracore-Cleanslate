@@ -96,6 +96,12 @@ Rate-limit envs:
 - `ASTRACORE_RATE_LIMIT_PER_MIN` (default: `60`)
 - `ASTRACORE_RATE_LIMIT_WINDOW_SEC` (default: `60`)
 
+Ops alert threshold envs:
+- `ASTRACORE_ALERT_ERROR_RATE_WARN_PCT` (default: `5`)
+- `ASTRACORE_ALERT_ERROR_RATE_CRIT_PCT` (default: `15`)
+- `ASTRACORE_ALERT_QUEUE_DEPTH_WARN` (default: `5`)
+- `ASTRACORE_ALERT_QUEUE_DEPTH_CRIT` (default: `10`)
+
 Quick ops auth check:
 ```bash
 curl -i http://localhost:8080/ops/metrics
