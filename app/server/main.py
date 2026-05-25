@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from app.core.ops_observability import configure_logging, observability_middleware
 from app.core.runtime_preflight import ensure_runtime_ready
 from app.server.routes_ingest import router as ingest_router
 from app.server.routes_ops import router as ops_router
@@ -7,6 +8,8 @@ from app.server.routes_sessions import router as session_router
 
 app = FastAPI(title="AstraCore Cleanslate API", version="0.1.0")
 app.state.runtime = {}
+configure_logging()
+app.middleware("http")(observability_middleware)
 
 
 @app.on_event("startup")

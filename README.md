@@ -47,3 +47,19 @@ Session overage is now **hard-locked**:
 - once monthly included sessions are exhausted, `/api/session/start` returns `403`.
 - overage/add-on behavior is disabled for V1 and can be adjusted later in:
   - `app/billing/usage_enforcement.py`
+
+## Ops visibility baseline (P0-7)
+Request-level observability is now enabled:
+- structured request logs on every HTTP call (`method`, `path`, `status`, `latency_ms`)
+- exception logging for failed requests
+- in-memory counters for:
+  - total requests
+  - 2xx / 4xx / 5xx breakdown
+  - average latency
+  - total errors
+
+New ops endpoints:
+- `GET /ops/metrics` → current counters
+- `GET /ops/recent-requests?limit=50` → rolling request log window
+- `GET /ops/recent-errors?limit=20` → failed sessions + request exceptions
+- `GET /ops/status` → session status summary + embedded metrics
