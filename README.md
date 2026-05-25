@@ -109,3 +109,10 @@ Quick ops auth check:
 curl -i http://localhost:8080/ops/metrics
 curl -i -H "x-ops-token: dev-ops-token" http://localhost:8080/ops/metrics
 ```
+
+Health monitor script (P1-6):
+```bash
+bash scripts/ops_alert_healthz_check.sh http://127.0.0.1:8080
+```
+- returns exit `0` when healthy (`ok`)
+- returns exit `1` when degraded (`warning/critical`)

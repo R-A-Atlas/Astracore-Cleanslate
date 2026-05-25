@@ -16,6 +16,7 @@ from app.intel.session_summary import build_session_summary
 from app.intel.store import save_summary
 from app.intel.transcription import transcribe_audio
 from app.core.checksum import verify_timeline_alignment
+from app.core.incidents import write_failure_incident_bundle
 from app.core.upload_handler import BatchUploadInterceptor
 from app.media_processing.splitter import finalize_session_output, process_session
 from app.reports.daily_review import build_daily_review, save_daily_review
@@ -175,8 +176,16 @@ async def session_stop_commit(payload: SessionStopCommitRequest):
         state.status = "failed"
         state.error = str(exc)
         state.updated_at = datetime.now(timezone.utc).isoformat()
+        incident_path = write_failure_incident_bundle(
+            user_id=payload.user_id,
+            session_id=payload.session_id,
+            operator_key=payload.operator_key,
+            stage="stop_commit",
+            error=str(exc),
+            state=state.__dict__,
+        )
         save_session(state)
-        raise HTTPException(status_code=500, detail=f"Stop-commit failed: {exc}")
+        raise HTTPException(status_code=500, detail=f"Stop-commit failed: {exc} | incident={incident_path}")
 
 
 @router.get("/{session_id}/status")

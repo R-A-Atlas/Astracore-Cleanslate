@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from app.core.ops_observability import configure_logging, observability_middleware
@@ -13,15 +15,8 @@ from app.server.routes_ingest import router as ingest_router
 from app.server.routes_ops import router as ops_router
 from app.server.routes_sessions import router as session_router
 
-app = FastAPI(title="AstraCore Cleanslate API", version="0.1.0")
-app.state.runtime = {}
-configure_logging()
-app.middleware("http")(observability_middleware)
-app.middleware("http")(ops_auth_and_rate_limit_middleware)
-
-
-@app.on_event("startup")
-async def startup_preflight() -> None:
+@asynccontextmanager
+async def app_lifespan(app: FastAPI):
     runtime = load_runtime_settings()
     app.state.runtime = ensure_runtime_ready()
     app.state.runtime["app"] = {"port": runtime.port, "environment": runtime.environment}
@@ -30,6 +25,14 @@ async def startup_preflight() -> None:
         "sensitive_endpoints_per_min": RATE_LIMIT_PER_MIN,
         "window_seconds": RATE_LIMIT_WINDOW_SEC,
     }
+    yield
+
+
+app = FastAPI(title="AstraCore Cleanslate API", version="0.1.0", lifespan=app_lifespan)
+app.state.runtime = {}
+configure_logging()
+app.middleware("http")(observability_middleware)
+app.middleware("http")(ops_auth_and_rate_limit_middleware)
 
 
 @app.get("/health")
