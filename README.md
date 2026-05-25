@@ -175,5 +175,7 @@ Behavior:
 - loads fusion timeline artifact
 - performs case-insensitive keyword match across timeline row fields (`text`, `event`, `frame`, `source`)
 - supports optional row-type filter and epoch range filter
+- ranks matches deterministically by `match_score` (desc), then `epoch_ms` (asc)
+- each match includes `match_score`, `matched_field`, and `matched_snippet`
 - returns deterministic metadata (`filters`, `scanned_rows`, `match_count`)
 - never mutates session artifacts

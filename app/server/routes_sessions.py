@@ -40,6 +40,48 @@ def _fusion_path(user_id: str, session_id: str) -> Path:
     return Path("workspace/memory/intel") / f"{user_id}__{session_id}__fusion_timeline.json"
 
 
+def _snippet(text: str, query: str, radius: int = 32) -> str:
+    idx = text.lower().find(query)
+    if idx < 0:
+        return text[: radius * 2].strip()
+    start = max(0, idx - radius)
+    end = min(len(text), idx + len(query) + radius)
+    return text[start:end].strip()
+
+
+def _score_match(row: dict, query: str) -> tuple[int, str, str]:
+    fields = [
+        ("text", str(row.get("text") or "")),
+        ("event", str(row.get("event") or "")),
+        ("frame", str(row.get("frame") or "")),
+        ("source", str(row.get("source") or "")),
+    ]
+    best_score = 0
+    best_field = ""
+    best_snippet = ""
+    for name, value in fields:
+        lowered = value.lower()
+        count = lowered.count(query)
+        if count <= 0:
+            continue
+        score = count * 10
+        if lowered.strip() == query:
+            score += 8
+        if name == "text":
+            score += 4
+        if name == "event":
+            score += 2
+        if score > best_score:
+            best_score = score
+            best_field = name
+            best_snippet = _snippet(value, query)
+
+    if str(row.get("type") or "").lower() == "transcript" and best_score > 0:
+        best_score += 1
+
+    return best_score, best_field, best_snippet
+
+
 async def _run_with_retries(coro_factory, *, attempts: int, label: str):
     last_exc = None
     for attempt in range(1, attempts + 1):
@@ -236,7 +278,7 @@ async def session_consult(
         raise HTTPException(status_code=400, detail="row_type must be transcript or frame")
 
     effective_limit = max(1, min(limit, 20))
-    matches = []
+    ranked = []
     scanned = 0
     for row in rows:
         scanned += 1
@@ -248,18 +290,30 @@ async def session_consult(
         if allowed_type and str(row.get("type") or "").lower() != allowed_type:
             continue
 
-        text_blob = " ".join(
-            [
-                str(row.get("text") or ""),
-                str(row.get("event") or ""),
-                str(row.get("frame") or ""),
-                str(row.get("source") or ""),
-            ]
-        ).lower()
-        if q in text_blob:
-            matches.append(row)
-        if len(matches) >= effective_limit:
-            break
+        score, matched_field, matched_snippet = _score_match(row, q)
+        if score <= 0:
+            continue
+        ranked.append(
+            {
+                "score": score,
+                "epoch_ms": epoch_ms,
+                "row": row,
+                "matched_field": matched_field,
+                "matched_snippet": matched_snippet,
+            }
+        )
+
+    ranked.sort(key=lambda x: (-x["score"], x["epoch_ms"]))
+    top = ranked[:effective_limit]
+    matches = [
+        {
+            **item["row"],
+            "match_score": item["score"],
+            "matched_field": item["matched_field"],
+            "matched_snippet": item["matched_snippet"],
+        }
+        for item in top
+    ]
 
     return {
         "status": "ok",

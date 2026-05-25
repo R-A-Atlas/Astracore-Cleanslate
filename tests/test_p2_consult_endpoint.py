@@ -13,9 +13,9 @@ def test_session_consult_reads_fusion_and_filters_matches():
         json.dumps(
             {
                 "timeline_rows": [
-                    {"type": "transcript", "epoch_ms": 0, "text": "price action breakout", "source": "transcript"},
-                    {"type": "frame", "epoch_ms": 1000, "event": "visual-change-detected", "frame": "f1.png", "source": "frame_ocr"},
                     {"type": "transcript", "epoch_ms": 2000, "text": "breakout failed", "source": "transcript"},
+                    {"type": "frame", "epoch_ms": 1000, "event": "visual-change-detected", "frame": "f1.png", "source": "frame_ocr"},
+                    {"type": "transcript", "epoch_ms": 2100, "text": "breakout breakout setup", "source": "transcript"},
                 ]
             }
         )
@@ -30,8 +30,11 @@ def test_session_consult_reads_fusion_and_filters_matches():
     assert res.status_code == 200
     body = res.json()
     assert body["status"] == "ok"
-    assert body["match_count"] == 1
-    assert body["matches"][0]["epoch_ms"] == 2000
+    assert body["match_count"] == 2
+    assert body["matches"][0]["epoch_ms"] == 2100
+    assert body["matches"][0]["match_score"] >= body["matches"][1]["match_score"]
+    assert body["matches"][0]["matched_field"] == "text"
+    assert "breakout" in body["matches"][0]["matched_snippet"].lower()
     assert body["filters"]["row_type"] == "transcript"
     assert body["scanned_rows"] >= 1
 
