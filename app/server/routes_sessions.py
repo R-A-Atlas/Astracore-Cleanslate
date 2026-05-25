@@ -96,7 +96,12 @@ def _score_match(row: dict, tokens: list[str], allowed_fields: set[str]) -> tupl
     return best_score, best_field, best_snippet
 
 
-def _build_follow_through_for_match(row_epoch: int, rows: list[dict], window_ms: int = 180000) -> dict:
+def _build_follow_through_for_match(
+    row_epoch: int,
+    rows: list[dict],
+    window_ms: int = 180000,
+    min_confidence: float = 0.0,
+) -> dict:
     signals = []
     end_epoch = row_epoch + window_ms
     for row in rows:
@@ -126,6 +131,8 @@ def _build_follow_through_for_match(row_epoch: int, rows: list[dict], window_ms:
             confidence = 0.65
 
         if not signal_type:
+            continue
+        if confidence < min_confidence:
             continue
 
         evidence = str(row.get("text") or row.get("event") or row.get("source") or "")
@@ -333,6 +340,7 @@ async def session_consult(
     min_score: int = 0,
     min_follow_through_score: int = 0,
     follow_through_window_ms: int = 180000,
+    follow_through_min_confidence: float = 0.0,
     include_follow_through: bool = False,
     debug: bool = False,
     include_context: bool = False,
@@ -365,6 +373,8 @@ async def session_consult(
         raise HTTPException(status_code=400, detail="min_follow_through_score must be between 0 and 100")
     if follow_through_window_ms < 1000 or follow_through_window_ms > 3600000:
         raise HTTPException(status_code=400, detail="follow_through_window_ms must be between 1000 and 3600000")
+    if follow_through_min_confidence < 0 or follow_through_min_confidence > 1:
+        raise HTTPException(status_code=400, detail="follow_through_min_confidence must be between 0 and 1")
     if min_token_hits < 1 or min_token_hits > 20:
         raise HTTPException(status_code=400, detail="min_token_hits must be between 1 and 20")
     if min_coverage_pct < 0 or min_coverage_pct > 100:
@@ -449,7 +459,12 @@ async def session_consult(
             scoped_reject_counts["min_score"] += 1
             continue
         follow_through = (
-            _build_follow_through_for_match(epoch_ms, rows, window_ms=follow_through_window_ms)
+            _build_follow_through_for_match(
+                epoch_ms,
+                rows,
+                window_ms=follow_through_window_ms,
+                min_confidence=follow_through_min_confidence,
+            )
             if include_follow_through
             else None
         )
@@ -553,6 +568,7 @@ async def session_consult(
             "min_score": min_score,
             "min_follow_through_score": min_follow_through_score,
             "follow_through_window_ms": follow_through_window_ms,
+            "follow_through_min_confidence": follow_through_min_confidence,
             "include_follow_through": include_follow_through,
             "include_context": include_context,
             "row_type": allowed_type,

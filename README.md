@@ -169,7 +169,7 @@ Purpose:
 
 ## P2-4 consult API (read-only)
 New route:
-- `GET /api/session/{session_id}/consult?user_id=<id>&query=<text>&limit=5&offset=<0+>&mode=<or|and>&sort=<score_desc|time_asc|time_desc|follow_through_desc>&fields=<csv:text|event|frame|source>&min_token_hits=<1..20>&min_coverage_pct=<0..100>&min_score=<0..200>&min_follow_through_score=<0..100>&follow_through_window_ms=<1000..3600000>&include_context=<true|false>&include_follow_through=<true|false>&debug=<true|false>&row_type=<transcript|frame>&start_epoch_ms=<int>&end_epoch_ms=<int>`
+- `GET /api/session/{session_id}/consult?user_id=<id>&query=<text>&limit=5&offset=<0+>&mode=<or|and>&sort=<score_desc|time_asc|time_desc|follow_through_desc>&fields=<csv:text|event|frame|source>&min_token_hits=<1..20>&min_coverage_pct=<0..100>&min_score=<0..200>&min_follow_through_score=<0..100>&follow_through_window_ms=<1000..3600000>&follow_through_min_confidence=<0..1>&include_context=<true|false>&include_follow_through=<true|false>&debug=<true|false>&row_type=<transcript|frame>&start_epoch_ms=<int>&end_epoch_ms=<int>`
 
 Behavior:
 - loads fusion timeline artifact
@@ -188,6 +188,7 @@ Behavior:
 - optional `include_follow_through=true` adds `follow_through` per match with deterministic signals + score
 - supports `min_follow_through_score` threshold (0..100) when follow-through enrichment is enabled
 - supports `follow_through_window_ms` (1000..3600000) to control look-ahead horizon for follow-through signal extraction
+- supports `follow_through_min_confidence` (0..1) to suppress weak follow-through signals
 - optional `include_follow_through=true` adds top-level `follow_through_stats` (`avg_score`, `max_score`, `signal_count`, `signal_type_counts`)
 - response includes `stats` block with `avg_score`, `max_score`, and `token_coverage_pct`
 - optional `debug=true` includes deterministic `debug_counts` (why rows were rejected by filter stage)
