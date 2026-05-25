@@ -29,6 +29,7 @@ def test_session_consult_reads_fusion_and_filters_matches():
                 "user_id": "u_consult",
                 "query": "breakout setup",
                 "mode": "or",
+                "sort": "score_desc",
                 "row_type": "transcript",
                 "start_epoch_ms": 1000,
                 "min_score": 20,
@@ -52,7 +53,7 @@ def test_session_consult_reads_fusion_and_filters_matches():
         )
         res_and = c.get(
             "/api/session/s1/consult",
-            params={"user_id": "u_consult", "query": "breakout setup", "mode": "and", "row_type": "transcript", "start_epoch_ms": 1000},
+            params={"user_id": "u_consult", "query": "breakout setup", "mode": "and", "sort": "time_desc", "row_type": "transcript", "start_epoch_ms": 1000},
         )
 
     assert res_or.status_code == 200
@@ -63,6 +64,7 @@ def test_session_consult_reads_fusion_and_filters_matches():
     assert body_or["next_offset"] == 1
     assert body_or["filters"]["offset"] == 0
     assert body_or["filters"]["mode"] == "or"
+    assert body_or["filters"]["sort"] == "score_desc"
     assert body_or["filters"]["min_score"] == 20
     assert body_or["filters"]["include_context"] is True
     assert "context" in body_or["matches"][0]
@@ -77,12 +79,14 @@ def test_session_consult_reads_fusion_and_filters_matches():
     assert res_and.status_code == 200
     body_and = res_and.json()
     assert body_and["match_count"] == 2
+    assert body_and["matches"][0]["epoch_ms"] >= body_and["matches"][1]["epoch_ms"]
     assert all("setup" in (m.get("text") or "") for m in body_and["matches"])
     assert body_and["filters"]["mode"] == "and"
+    assert body_and["filters"]["sort"] == "time_desc"
     assert body_and["filters"]["row_type"] == "transcript"
 
 
-def test_session_consult_rejects_bad_row_type_empty_query_bad_mode_bad_score_and_bad_offset():
+def test_session_consult_rejects_bad_row_type_empty_query_bad_mode_bad_sort_bad_score_and_bad_offset():
     fusion_path = Path("workspace/memory/intel/u_consult__s2__fusion_timeline.json")
     fusion_path.parent.mkdir(parents=True, exist_ok=True)
     fusion_path.write_text(json.dumps({"timeline_rows": []}))
@@ -100,6 +104,10 @@ def test_session_consult_rejects_bad_row_type_empty_query_bad_mode_bad_score_and
             "/api/session/s2/consult",
             params={"user_id": "u_consult", "query": "x y", "mode": "xor"},
         )
+        bad_sort = c.get(
+            "/api/session/s2/consult",
+            params={"user_id": "u_consult", "query": "x y", "sort": "random"},
+        )
         bad_score = c.get(
             "/api/session/s2/consult",
             params={"user_id": "u_consult", "query": "x y", "min_score": "999"},
@@ -112,6 +120,7 @@ def test_session_consult_rejects_bad_row_type_empty_query_bad_mode_bad_score_and
     assert bad_type.status_code == 400
     assert empty_q.status_code == 400
     assert bad_mode.status_code == 400
+    assert bad_sort.status_code == 400
     assert bad_score.status_code == 400
     assert bad_offset.status_code == 400
 
