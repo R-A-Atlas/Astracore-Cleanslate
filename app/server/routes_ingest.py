@@ -26,11 +26,18 @@ async def upload_part(
     filename = f"part_{part_index:02d}_usr_{operator_key}.webm"
     target_path = target_dir / filename
 
-    data = await file.read()
-    if not data:
-        raise HTTPException(status_code=400, detail="Empty upload")
+    bytes_written = 0
+    with target_path.open("wb") as out:
+        while True:
+            chunk = file.file.read(1024 * 1024)
+            if not chunk:
+                break
+            out.write(chunk)
+            bytes_written += len(chunk)
 
-    target_path.write_bytes(data)
+    if bytes_written == 0:
+        target_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=400, detail="Empty upload")
 
     state = SESSIONS[session_key]
     state.parts_uploaded += 1

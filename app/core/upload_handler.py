@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import traceback
 from datetime import datetime, timezone
 from pathlib import Path
@@ -24,6 +25,12 @@ class SessionStatus:
     FAILED = "failed"
 
 
+def _write_json_atomic(path: Path, data: dict) -> None:
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(data, indent=2))
+    os.replace(tmp, path)
+
+
 def _log_processing_error(packet: dict, tb: str) -> None:
     """
     Write the fault payload exclusively to the operator's isolated seat fault log.
@@ -45,7 +52,7 @@ def _log_processing_error(packet: dict, tb: str) -> None:
         "error": packet.get("error"),
         "traceback": tb,
     })
-    seat_log_path.write_text(json.dumps(log, indent=2))
+    _write_json_atomic(seat_log_path, log)
 
 
 class BatchUploadInterceptor:

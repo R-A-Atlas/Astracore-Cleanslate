@@ -13,6 +13,7 @@ from app.intel.frame_ocr import extract_frame_events
 from app.intel.session_summary import build_session_summary
 from app.intel.store import save_summary
 from app.intel.transcription import transcribe_audio
+from app.core.checksum import verify_timeline_alignment
 from app.media_processing.splitter import finalize_session_output, process_session
 from app.reports.daily_review import build_daily_review, save_daily_review
 from app.server.schemas import SessionStartRequest, SessionStopCommitRequest
@@ -69,6 +70,7 @@ async def session_stop_commit(payload: SessionStopCommitRequest):
         transcript_segments = transcribe_audio(state.audio_path) if state.audio_path else []
         frame_events = extract_frame_events(frame_paths)
         event_rows = build_event_rows(transcript_segments, frame_events)
+        verify_timeline_alignment(event_rows, context=f"{payload.user_id}:{payload.session_id}")
         behavior_tags = infer_behavior_tags(transcript_segments, frame_events)
 
         summary = build_session_summary(
