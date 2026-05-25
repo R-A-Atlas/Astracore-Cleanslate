@@ -9,6 +9,7 @@ from app.intel.session_summary import build_session_summary
 from app.intel.store import save_summary
 from app.intel.transcription import transcribe_audio
 from app.media_processing.splitter import finalize_session_output, process_session
+from app.reports.daily_review import build_daily_review, save_daily_review
 from app.server.schemas import SessionStartRequest, SessionStopCommitRequest
 from app.server.session_store import load_session, save_session
 from app.server.state import SESSIONS, SessionState, key
@@ -66,6 +67,8 @@ async def session_stop_commit(payload: SessionStopCommitRequest):
             behavior_tags=behavior_tags,
         )
         summary_path = save_summary(payload.user_id, payload.session_id, summary)
+        daily_review = build_daily_review(summary)
+        daily_review_path = save_daily_review(daily_review)
 
         state.status = "ready"
         state.updated_at = datetime.now(timezone.utc).isoformat()
@@ -78,6 +81,7 @@ async def session_stop_commit(payload: SessionStopCommitRequest):
             "audio": state.audio_path,
             "frame_count": state.frame_count,
             "summary_path": summary_path,
+            "daily_review_path": daily_review_path,
             "behavior_tags": behavior_tags,
         }
     except Exception as exc:
