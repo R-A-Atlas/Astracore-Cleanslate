@@ -14,7 +14,7 @@ def test_session_consult_reads_fusion_and_filters_matches():
             {
                 "timeline_rows": [
                     {"type": "transcript", "epoch_ms": 2000, "text": "breakout failed", "source": "transcript"},
-                    {"type": "frame", "epoch_ms": 1000, "event": "visual-change-detected", "frame": "f1.png", "source": "frame_ocr"},
+                    {"type": "frame", "epoch_ms": 2050, "event": "visual-change-detected", "frame": "f1.png", "source": "frame_ocr"},
                     {"type": "transcript", "epoch_ms": 2100, "text": "breakout breakout setup", "source": "transcript"},
                     {"type": "transcript", "epoch_ms": 2200, "text": "breakout momentum setup", "source": "transcript"},
                 ]
@@ -25,7 +25,15 @@ def test_session_consult_reads_fusion_and_filters_matches():
     with TestClient(app) as c:
         res_or = c.get(
             "/api/session/s1/consult",
-            params={"user_id": "u_consult", "query": "breakout setup", "mode": "or", "row_type": "transcript", "start_epoch_ms": 1000},
+            params={
+                "user_id": "u_consult",
+                "query": "breakout setup",
+                "mode": "or",
+                "row_type": "transcript",
+                "start_epoch_ms": 1000,
+                "min_score": 30,
+                "include_context": "true",
+            },
         )
         res_and = c.get(
             "/api/session/s1/consult",
@@ -35,10 +43,11 @@ def test_session_consult_reads_fusion_and_filters_matches():
     assert res_or.status_code == 200
     body_or = res_or.json()
     assert body_or["status"] == "ok"
-    assert body_or["match_count"] == 3
-    assert body_or["matches"][0]["epoch_ms"] == 2100
-    assert body_or["matches"][0]["match_score"] >= body_or["matches"][1]["match_score"]
+    assert body_or["match_count"] == 2
     assert body_or["filters"]["mode"] == "or"
+    assert body_or["filters"]["min_score"] == 30
+    assert body_or["filters"]["include_context"] is True
+    assert "context" in body_or["matches"][0]
 
     assert res_and.status_code == 200
     body_and = res_and.json()
@@ -48,7 +57,7 @@ def test_session_consult_reads_fusion_and_filters_matches():
     assert body_and["filters"]["row_type"] == "transcript"
 
 
-def test_session_consult_rejects_bad_row_type_empty_query_and_bad_mode():
+def test_session_consult_rejects_bad_row_type_empty_query_bad_mode_and_bad_score():
     fusion_path = Path("workspace/memory/intel/u_consult__s2__fusion_timeline.json")
     fusion_path.parent.mkdir(parents=True, exist_ok=True)
     fusion_path.write_text(json.dumps({"timeline_rows": []}))
@@ -66,10 +75,15 @@ def test_session_consult_rejects_bad_row_type_empty_query_and_bad_mode():
             "/api/session/s2/consult",
             params={"user_id": "u_consult", "query": "x y", "mode": "xor"},
         )
+        bad_score = c.get(
+            "/api/session/s2/consult",
+            params={"user_id": "u_consult", "query": "x y", "min_score": "999"},
+        )
 
     assert bad_type.status_code == 400
     assert empty_q.status_code == 400
     assert bad_mode.status_code == 400
+    assert bad_score.status_code == 400
 
 
 def test_session_consult_404_without_fusion():

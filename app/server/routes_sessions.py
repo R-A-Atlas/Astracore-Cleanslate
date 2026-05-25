@@ -265,6 +265,8 @@ async def session_consult(
     query: str,
     limit: int = 5,
     mode: str = "or",
+    min_score: int = 0,
+    include_context: bool = False,
     row_type: str | None = None,
     start_epoch_ms: int | None = None,
     end_epoch_ms: int | None = None,
@@ -283,6 +285,8 @@ async def session_consult(
     query_mode = (mode or "or").strip().lower()
     if query_mode not in {"or", "and"}:
         raise HTTPException(status_code=400, detail="mode must be and or or")
+    if min_score < 0 or min_score > 200:
+        raise HTTPException(status_code=400, detail="min_score must be between 0 and 200")
 
     allowed_type = (row_type or "").strip().lower() or None
     if allowed_type and allowed_type not in {"transcript", "frame"}:
@@ -316,7 +320,7 @@ async def session_consult(
             continue
 
         score, matched_field, matched_snippet = _score_match(row, tokens)
-        if score <= 0:
+        if score <= 0 or score < min_score:
             continue
         ranked.append(
             {
@@ -330,15 +334,31 @@ async def session_consult(
 
     ranked.sort(key=lambda x: (-x["score"], x["epoch_ms"]))
     top = ranked[:effective_limit]
-    matches = [
-        {
+    matches = []
+    for item in top:
+        out_row = {
             **item["row"],
             "match_score": item["score"],
             "matched_field": item["matched_field"],
             "matched_snippet": item["matched_snippet"],
         }
-        for item in top
-    ]
+        if include_context:
+            row_epoch = int(item["row"].get("epoch_ms") or 0)
+            context_before = [
+                r
+                for r in rows
+                if int(r.get("epoch_ms") or 0) < row_epoch
+            ][-1:]
+            context_after = [
+                r
+                for r in rows
+                if int(r.get("epoch_ms") or 0) > row_epoch
+            ][:1]
+            out_row["context"] = {
+                "before": context_before,
+                "after": context_after,
+            }
+        matches.append(out_row)
 
     return {
         "status": "ok",
@@ -347,6 +367,8 @@ async def session_consult(
         "query": query,
         "filters": {
             "mode": query_mode,
+            "min_score": min_score,
+            "include_context": include_context,
             "row_type": allowed_type,
             "start_epoch_ms": start_epoch_ms,
             "end_epoch_ms": end_epoch_ms,
