@@ -272,6 +272,7 @@ async def session_consult(
     min_token_hits: int = 1,
     min_coverage_pct: float = 0.0,
     min_score: int = 0,
+    debug: bool = False,
     include_context: bool = False,
     row_type: str | None = None,
     start_epoch_ms: int | None = None,
@@ -320,14 +321,25 @@ async def session_consult(
     effective_limit = max(1, min(limit, 20))
     ranked = []
     scanned = 0
+    reject_counts = {
+        "time_window": 0,
+        "row_type": 0,
+        "query_mode": 0,
+        "min_token_hits": 0,
+        "min_coverage_pct": 0,
+        "min_score": 0,
+    }
     for row in rows:
         scanned += 1
         epoch_ms = int(row.get("epoch_ms") or 0)
         if start_epoch_ms is not None and epoch_ms < start_epoch_ms:
+            reject_counts["time_window"] += 1
             continue
         if end_epoch_ms is not None and epoch_ms > end_epoch_ms:
+            reject_counts["time_window"] += 1
             continue
         if allowed_type and str(row.get("type") or "").lower() != allowed_type:
+            reject_counts["row_type"] += 1
             continue
 
         blob_parts = {
@@ -339,18 +351,23 @@ async def session_consult(
         blob = " ".join(blob_parts[k] for k in ["text", "event", "frame", "source"] if k in selected_fields).lower()
         token_presence = [tok in blob for tok in tokens]
         if query_mode == "and" and not all(token_presence):
+            reject_counts["query_mode"] += 1
             continue
         if query_mode == "or" and not any(token_presence):
+            reject_counts["query_mode"] += 1
             continue
 
         matched_tokens = [tok for tok in tokens if tok in blob]
         matched_coverage_pct = round((len(matched_tokens) / len(tokens)) * 100, 2) if tokens else 0.0
         if len(matched_tokens) < min_token_hits:
+            reject_counts["min_token_hits"] += 1
             continue
         if matched_coverage_pct < min_coverage_pct:
+            reject_counts["min_coverage_pct"] += 1
             continue
         score, matched_field, matched_snippet = _score_match(row, tokens, selected_fields)
         if score <= 0 or score < min_score:
+            reject_counts["min_score"] += 1
             continue
         ranked.append(
             {
@@ -407,7 +424,7 @@ async def session_consult(
         "token_coverage_pct": token_coverage_pct,
     }
 
-    return {
+    response = {
         "status": "ok",
         "user_id": user_id,
         "session_id": session_id,
@@ -425,6 +442,7 @@ async def session_consult(
             "end_epoch_ms": end_epoch_ms,
             "limit": effective_limit,
             "offset": offset,
+            "debug": debug,
         },
         "scanned_rows": scanned,
         "total_matches": len(ranked),
@@ -434,6 +452,9 @@ async def session_consult(
         "matches": matches,
         "fusion_timeline_path": str(fusion_path),
     }
+    if debug:
+        response["debug_counts"] = reject_counts
+    return response
 
 
 @router.get("/{session_id}/status")

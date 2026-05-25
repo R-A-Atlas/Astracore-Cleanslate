@@ -169,7 +169,7 @@ Purpose:
 
 ## P2-4 consult API (read-only)
 New route:
-- `GET /api/session/{session_id}/consult?user_id=<id>&query=<text>&limit=5&offset=<0+>&mode=<or|and>&sort=<score_desc|time_asc|time_desc>&fields=<csv:text|event|frame|source>&min_token_hits=<1..20>&min_coverage_pct=<0..100>&min_score=<0..200>&include_context=<true|false>&row_type=<transcript|frame>&start_epoch_ms=<int>&end_epoch_ms=<int>`
+- `GET /api/session/{session_id}/consult?user_id=<id>&query=<text>&limit=5&offset=<0+>&mode=<or|and>&sort=<score_desc|time_asc|time_desc>&fields=<csv:text|event|frame|source>&min_token_hits=<1..20>&min_coverage_pct=<0..100>&min_score=<0..200>&include_context=<true|false>&debug=<true|false>&row_type=<transcript|frame>&start_epoch_ms=<int>&end_epoch_ms=<int>`
 
 Behavior:
 - loads fusion timeline artifact
@@ -186,5 +186,6 @@ Behavior:
 - each sort mode has deterministic tie-breakers (score/epoch)
 - each match includes `match_score`, `matched_field`, `matched_snippet`, and `matched_tokens`
 - response includes `stats` block with `avg_score`, `max_score`, and `token_coverage_pct`
+- optional `debug=true` includes deterministic `debug_counts` (why rows were rejected by filter stage)
 - returns deterministic metadata (`filters`, `scanned_rows`, `match_count`)
 - never mutates session artifacts

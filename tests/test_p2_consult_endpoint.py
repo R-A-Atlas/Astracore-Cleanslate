@@ -37,6 +37,7 @@ def test_session_consult_reads_fusion_and_filters_matches():
                 "start_epoch_ms": 1000,
                 "min_score": 20,
                 "include_context": "true",
+                "debug": "true",
                 "limit": 1,
                 "offset": 0,
             },
@@ -75,6 +76,9 @@ def test_session_consult_reads_fusion_and_filters_matches():
     assert body_or["filters"]["min_coverage_pct"] == 100
     assert body_or["filters"]["min_score"] == 20
     assert body_or["filters"]["include_context"] is True
+    assert body_or["filters"]["debug"] is True
+    assert "debug_counts" in body_or
+    assert body_or["debug_counts"]["query_mode"] >= 0
     assert "context" in body_or["matches"][0]
     assert body_or["matches"][0]["matched_tokens"] == ["breakout", "setup"]
 
