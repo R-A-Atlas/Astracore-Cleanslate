@@ -355,8 +355,8 @@ async def session_consult(
     if query_mode not in {"or", "and"}:
         raise HTTPException(status_code=400, detail="mode must be and or or")
     sort_mode = (sort or "score_desc").strip().lower()
-    if sort_mode not in {"score_desc", "time_asc", "time_desc"}:
-        raise HTTPException(status_code=400, detail="sort must be score_desc, time_asc, or time_desc")
+    if sort_mode not in {"score_desc", "time_asc", "time_desc", "follow_through_desc"}:
+        raise HTTPException(status_code=400, detail="sort must be score_desc, time_asc, time_desc, or follow_through_desc")
     if offset < 0:
         raise HTTPException(status_code=400, detail="offset must be >= 0")
     if min_score < 0 or min_score > 200:
@@ -473,8 +473,16 @@ async def session_consult(
         ranked.sort(key=lambda x: (-x["score"], x["epoch_ms"]))
     elif sort_mode == "time_asc":
         ranked.sort(key=lambda x: (x["epoch_ms"], -x["score"]))
-    else:  # time_desc
+    elif sort_mode == "time_desc":
         ranked.sort(key=lambda x: (-x["epoch_ms"], -x["score"]))
+    else:  # follow_through_desc
+        ranked.sort(
+            key=lambda x: (
+                -int(((x.get("follow_through") or {}).get("score") or 0)),
+                -x["score"],
+                x["epoch_ms"],
+            )
+        )
     paged = ranked[offset : offset + effective_limit]
     next_offset = offset + effective_limit if (offset + effective_limit) < len(ranked) else None
     matches = []

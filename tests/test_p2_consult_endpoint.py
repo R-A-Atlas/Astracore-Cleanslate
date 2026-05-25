@@ -66,6 +66,7 @@ def test_session_consult_reads_fusion_and_filters_matches():
                 "mode": "or",
                 "row_type": "transcript",
                 "include_follow_through": "true",
+                "sort": "follow_through_desc",
                 "min_follow_through_score": 50,
             },
         )
@@ -131,7 +132,10 @@ def test_session_consult_reads_fusion_and_filters_matches():
     assert body_ft["total_matches"] == 2
     assert body_ft["match_count"] == 2
     assert body_ft["filters"]["min_follow_through_score"] == 50
+    assert body_ft["filters"]["sort"] == "follow_through_desc"
     assert all(m["follow_through"]["score"] >= 50 for m in body_ft["matches"])
+    ft_scores = [m["follow_through"]["score"] for m in body_ft["matches"]]
+    assert ft_scores == sorted(ft_scores, reverse=True)
 
     assert res_and.status_code == 200
     body_and = res_and.json()

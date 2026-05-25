@@ -169,7 +169,7 @@ Purpose:
 
 ## P2-4 consult API (read-only)
 New route:
-- `GET /api/session/{session_id}/consult?user_id=<id>&query=<text>&limit=5&offset=<0+>&mode=<or|and>&sort=<score_desc|time_asc|time_desc>&fields=<csv:text|event|frame|source>&min_token_hits=<1..20>&min_coverage_pct=<0..100>&min_score=<0..200>&min_follow_through_score=<0..100>&follow_through_window_ms=<1000..3600000>&include_context=<true|false>&include_follow_through=<true|false>&debug=<true|false>&row_type=<transcript|frame>&start_epoch_ms=<int>&end_epoch_ms=<int>`
+- `GET /api/session/{session_id}/consult?user_id=<id>&query=<text>&limit=5&offset=<0+>&mode=<or|and>&sort=<score_desc|time_asc|time_desc|follow_through_desc>&fields=<csv:text|event|frame|source>&min_token_hits=<1..20>&min_coverage_pct=<0..100>&min_score=<0..200>&min_follow_through_score=<0..100>&follow_through_window_ms=<1000..3600000>&include_context=<true|false>&include_follow_through=<true|false>&debug=<true|false>&row_type=<transcript|frame>&start_epoch_ms=<int>&end_epoch_ms=<int>`
 
 Behavior:
 - loads fusion timeline artifact
