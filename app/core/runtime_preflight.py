@@ -9,6 +9,8 @@ REQUIRED_DIRS = [
     Path("workspace/memory/sessions"),
     Path("workspace/memory/intel"),
     Path("workspace/outputs/reports/daily"),
+    Path("workspace/ops"),
+    Path("workspace/logs"),
 ]
 
 

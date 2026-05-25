@@ -63,3 +63,16 @@ New ops endpoints:
 - `GET /ops/recent-requests?limit=50` → rolling request log window
 - `GET /ops/recent-errors?limit=20` → failed sessions + request exceptions
 - `GET /ops/status` → session status summary + embedded metrics
+
+## Persistence hardening (P0-8)
+Ops baseline is now restart-safe and log-safe:
+- metrics snapshot persisted to disk: `workspace/ops/metrics_snapshot.json`
+- snapshot is atomically rewritten on each request update
+- counters survive restarts (with `boot_count` incremented per startup)
+- rotating API logs enabled at `workspace/logs/api.log`
+  - max size: ~2 MB per file
+  - backups kept: 5
+
+Startup/runtime directories now also include:
+- `workspace/ops`
+- `workspace/logs`
