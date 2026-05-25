@@ -169,12 +169,13 @@ Purpose:
 
 ## P2-4 consult API (read-only)
 New route:
-- `GET /api/session/{session_id}/consult?user_id=<id>&query=<text>&limit=5&row_type=<transcript|frame>&start_epoch_ms=<int>&end_epoch_ms=<int>`
+- `GET /api/session/{session_id}/consult?user_id=<id>&query=<text>&limit=5&mode=<or|and>&row_type=<transcript|frame>&start_epoch_ms=<int>&end_epoch_ms=<int>`
 
 Behavior:
 - loads fusion timeline artifact
 - performs case-insensitive keyword match across timeline row fields (`text`, `event`, `frame`, `source`)
 - supports optional row-type filter and epoch range filter
+- supports query mode: `or` (any token) or `and` (all tokens)
 - ranks matches deterministically by `match_score` (desc), then `epoch_ms` (asc)
 - each match includes `match_score`, `matched_field`, and `matched_snippet`
 - returns deterministic metadata (`filters`, `scanned_rows`, `match_count`)

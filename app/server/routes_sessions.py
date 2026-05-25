@@ -49,7 +49,11 @@ def _snippet(text: str, query: str, radius: int = 32) -> str:
     return text[start:end].strip()
 
 
-def _score_match(row: dict, query: str) -> tuple[int, str, str]:
+def _tokenize_query(query: str) -> list[str]:
+    return [t for t in query.strip().lower().split() if t]
+
+
+def _score_match(row: dict, tokens: list[str]) -> tuple[int, str, str]:
     fields = [
         ("text", str(row.get("text") or "")),
         ("event", str(row.get("event") or "")),
@@ -61,11 +65,12 @@ def _score_match(row: dict, query: str) -> tuple[int, str, str]:
     best_snippet = ""
     for name, value in fields:
         lowered = value.lower()
-        count = lowered.count(query)
-        if count <= 0:
+        token_hits = [tok for tok in tokens if tok in lowered]
+        if not token_hits:
             continue
+        count = sum(lowered.count(tok) for tok in token_hits)
         score = count * 10
-        if lowered.strip() == query:
+        if len(token_hits) == len(tokens):
             score += 8
         if name == "text":
             score += 4
@@ -74,7 +79,7 @@ def _score_match(row: dict, query: str) -> tuple[int, str, str]:
         if score > best_score:
             best_score = score
             best_field = name
-            best_snippet = _snippet(value, query)
+            best_snippet = _snippet(value, token_hits[0])
 
     if str(row.get("type") or "").lower() == "transcript" and best_score > 0:
         best_score += 1
@@ -259,6 +264,7 @@ async def session_consult(
     user_id: str,
     query: str,
     limit: int = 5,
+    mode: str = "or",
     row_type: str | None = None,
     start_epoch_ms: int | None = None,
     end_epoch_ms: int | None = None,
@@ -272,6 +278,11 @@ async def session_consult(
     q = (query or "").strip().lower()
     if not q:
         raise HTTPException(status_code=400, detail="query is required")
+    tokens = _tokenize_query(q)
+
+    query_mode = (mode or "or").strip().lower()
+    if query_mode not in {"or", "and"}:
+        raise HTTPException(status_code=400, detail="mode must be and or or")
 
     allowed_type = (row_type or "").strip().lower() or None
     if allowed_type and allowed_type not in {"transcript", "frame"}:
@@ -290,7 +301,21 @@ async def session_consult(
         if allowed_type and str(row.get("type") or "").lower() != allowed_type:
             continue
 
-        score, matched_field, matched_snippet = _score_match(row, q)
+        blob = " ".join(
+            [
+                str(row.get("text") or ""),
+                str(row.get("event") or ""),
+                str(row.get("frame") or ""),
+                str(row.get("source") or ""),
+            ]
+        ).lower()
+        token_presence = [tok in blob for tok in tokens]
+        if query_mode == "and" and not all(token_presence):
+            continue
+        if query_mode == "or" and not any(token_presence):
+            continue
+
+        score, matched_field, matched_snippet = _score_match(row, tokens)
         if score <= 0:
             continue
         ranked.append(
@@ -321,6 +346,7 @@ async def session_consult(
         "session_id": session_id,
         "query": query,
         "filters": {
+            "mode": query_mode,
             "row_type": allowed_type,
             "start_epoch_ms": start_epoch_ms,
             "end_epoch_ms": end_epoch_ms,
