@@ -22,3 +22,9 @@ def test_ops_trend_and_alerts_endpoints_shape():
         assert "checks" in alerts_payload
         assert "error_rate_5xx" in alerts_payload["checks"]
         assert "queue_depth" in alerts_payload["checks"]
+
+        health = c.get("/ops/alerts/health", headers={"x-ops-token": "dev-ops-token"})
+        assert health.status_code in (200, 503)
+        body = health.json()
+        assert body["status"] in ("ok", "degraded")
+        assert body["level"] in ("ok", "warning", "critical")

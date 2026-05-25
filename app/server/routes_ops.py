@@ -1,7 +1,7 @@
 import os
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 
 from app.core.ops_observability import RECENT_ERRORS, RECENT_REQUESTS, get_ops_metrics
 from app.core.security_guardrails import OPS_TOKEN_HEADER, RATE_LIMIT_PER_MIN, RATE_LIMIT_WINDOW_SEC
@@ -126,6 +126,21 @@ async def ops_alerts(window_min: int = 15):
             },
         },
     }
+
+
+@router.get("/alerts/health")
+async def ops_alerts_health(window_min: int = 15):
+    alerts = await ops_alerts(window_min=window_min)
+    status_code = 200 if alerts.get("level") == "ok" else 503
+    return Response(
+        content=(
+            '{"status":"ok","level":"ok"}'
+            if status_code == 200
+            else '{"status":"degraded","level":"' + str(alerts.get("level")) + '"}'
+        ),
+        status_code=status_code,
+        media_type="application/json",
+    )
 
 
 @router.get("/config")
