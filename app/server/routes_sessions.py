@@ -212,7 +212,15 @@ async def session_stop_commit(payload: SessionStopCommitRequest):
 
 
 @router.get("/{session_id}/consult")
-async def session_consult(session_id: str, user_id: str, query: str, limit: int = 5):
+async def session_consult(
+    session_id: str,
+    user_id: str,
+    query: str,
+    limit: int = 5,
+    row_type: str | None = None,
+    start_epoch_ms: int | None = None,
+    end_epoch_ms: int | None = None,
+):
     fusion_path = _fusion_path(user_id, session_id)
     if not fusion_path.exists():
         raise HTTPException(status_code=404, detail="Fusion timeline not found")
@@ -223,8 +231,23 @@ async def session_consult(session_id: str, user_id: str, query: str, limit: int 
     if not q:
         raise HTTPException(status_code=400, detail="query is required")
 
+    allowed_type = (row_type or "").strip().lower() or None
+    if allowed_type and allowed_type not in {"transcript", "frame"}:
+        raise HTTPException(status_code=400, detail="row_type must be transcript or frame")
+
+    effective_limit = max(1, min(limit, 20))
     matches = []
+    scanned = 0
     for row in rows:
+        scanned += 1
+        epoch_ms = int(row.get("epoch_ms") or 0)
+        if start_epoch_ms is not None and epoch_ms < start_epoch_ms:
+            continue
+        if end_epoch_ms is not None and epoch_ms > end_epoch_ms:
+            continue
+        if allowed_type and str(row.get("type") or "").lower() != allowed_type:
+            continue
+
         text_blob = " ".join(
             [
                 str(row.get("text") or ""),
@@ -235,7 +258,7 @@ async def session_consult(session_id: str, user_id: str, query: str, limit: int 
         ).lower()
         if q in text_blob:
             matches.append(row)
-        if len(matches) >= max(1, min(limit, 20)):
+        if len(matches) >= effective_limit:
             break
 
     return {
@@ -243,6 +266,13 @@ async def session_consult(session_id: str, user_id: str, query: str, limit: int 
         "user_id": user_id,
         "session_id": session_id,
         "query": query,
+        "filters": {
+            "row_type": allowed_type,
+            "start_epoch_ms": start_epoch_ms,
+            "end_epoch_ms": end_epoch_ms,
+            "limit": effective_limit,
+        },
+        "scanned_rows": scanned,
         "match_count": len(matches),
         "matches": matches,
         "fusion_timeline_path": str(fusion_path),
