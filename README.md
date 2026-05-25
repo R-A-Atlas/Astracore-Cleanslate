@@ -132,3 +132,21 @@ Payload includes:
 - `audio_path`
 - `segment_count`
 - `segments`
+
+## P2-2 OCR/event normalization contract
+`build_event_rows(...)` now emits a normalized timeline for transcript + frame events.
+Each row includes:
+- `id`
+- `type` (`transcript` or `frame`)
+- `epoch_ms` (monotonic sortable key)
+- `source`
+
+Transcript rows include:
+- `start_ms`, `end_ms`, `text`
+
+Frame rows include:
+- `index`, `frame`, `event`
+
+Fallback behavior:
+- if a frame event has no `epoch_ms`, one is derived after transcript window (`max transcript end + 1 + index*1000`).
+- final rows are sorted by `epoch_ms`, then transcript before frame on ties.
