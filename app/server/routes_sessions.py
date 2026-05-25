@@ -53,13 +53,14 @@ def _tokenize_query(query: str) -> list[str]:
     return [t for t in query.strip().lower().split() if t]
 
 
-def _score_match(row: dict, tokens: list[str]) -> tuple[int, str, str]:
-    fields = [
+def _score_match(row: dict, tokens: list[str], allowed_fields: set[str]) -> tuple[int, str, str]:
+    all_fields = [
         ("text", str(row.get("text") or "")),
         ("event", str(row.get("event") or "")),
         ("frame", str(row.get("frame") or "")),
         ("source", str(row.get("source") or "")),
     ]
+    fields = [item for item in all_fields if item[0] in allowed_fields]
     best_score = 0
     best_field = ""
     best_snippet = ""
@@ -267,6 +268,7 @@ async def session_consult(
     offset: int = 0,
     mode: str = "or",
     sort: str = "score_desc",
+    fields: str | None = None,
     min_score: int = 0,
     include_context: bool = False,
     row_type: str | None = None,
@@ -295,6 +297,16 @@ async def session_consult(
     if min_score < 0 or min_score > 200:
         raise HTTPException(status_code=400, detail="min_score must be between 0 and 200")
 
+    allowed_search_fields = {"text", "event", "frame", "source"}
+    selected_fields = allowed_search_fields
+    if fields is not None and str(fields).strip() != "":
+        selected_fields = {part.strip().lower() for part in str(fields).split(",") if part.strip()}
+        if not selected_fields:
+            raise HTTPException(status_code=400, detail="fields must include at least one value")
+        unknown = selected_fields - allowed_search_fields
+        if unknown:
+            raise HTTPException(status_code=400, detail="fields must be any of: text,event,frame,source")
+
     allowed_type = (row_type or "").strip().lower() or None
     if allowed_type and allowed_type not in {"transcript", "frame"}:
         raise HTTPException(status_code=400, detail="row_type must be transcript or frame")
@@ -312,21 +324,20 @@ async def session_consult(
         if allowed_type and str(row.get("type") or "").lower() != allowed_type:
             continue
 
-        blob = " ".join(
-            [
-                str(row.get("text") or ""),
-                str(row.get("event") or ""),
-                str(row.get("frame") or ""),
-                str(row.get("source") or ""),
-            ]
-        ).lower()
+        blob_parts = {
+            "text": str(row.get("text") or ""),
+            "event": str(row.get("event") or ""),
+            "frame": str(row.get("frame") or ""),
+            "source": str(row.get("source") or ""),
+        }
+        blob = " ".join(blob_parts[k] for k in ["text", "event", "frame", "source"] if k in selected_fields).lower()
         token_presence = [tok in blob for tok in tokens]
         if query_mode == "and" and not all(token_presence):
             continue
         if query_mode == "or" and not any(token_presence):
             continue
 
-        score, matched_field, matched_snippet = _score_match(row, tokens)
+        score, matched_field, matched_snippet = _score_match(row, tokens, selected_fields)
         if score <= 0 or score < min_score:
             continue
         ranked.append(
@@ -381,6 +392,7 @@ async def session_consult(
         "filters": {
             "mode": query_mode,
             "sort": sort_mode,
+            "fields": sorted(selected_fields),
             "min_score": min_score,
             "include_context": include_context,
             "row_type": allowed_type,
