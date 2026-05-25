@@ -57,6 +57,17 @@ def test_session_consult_reads_fusion_and_filters_matches():
                 "offset": 1,
             },
         )
+        res_ft_floor = c.get(
+            "/api/session/s1/consult",
+            params={
+                "user_id": "u_consult",
+                "query": "breakout setup",
+                "mode": "or",
+                "row_type": "transcript",
+                "include_follow_through": "true",
+                "min_follow_through_score": 50,
+            },
+        )
         res_and = c.get(
             "/api/session/s1/consult",
             params={"user_id": "u_consult", "query": "breakout setup", "mode": "and", "sort": "time_desc", "row_type": "transcript", "start_epoch_ms": 1000},
@@ -77,6 +88,7 @@ def test_session_consult_reads_fusion_and_filters_matches():
     assert body_or["filters"]["min_token_hits"] == 2
     assert body_or["filters"]["min_coverage_pct"] == 100
     assert body_or["filters"]["min_score"] == 20
+    assert body_or["filters"]["min_follow_through_score"] == 0
     assert body_or["filters"]["include_follow_through"] is True
     assert body_or["filters"]["include_context"] is True
     assert body_or["filters"]["debug"] is True
@@ -109,6 +121,13 @@ def test_session_consult_reads_fusion_and_filters_matches():
     assert body_p2["next_offset"] is None
     assert body_p2["filters"]["offset"] == 1
 
+    assert res_ft_floor.status_code == 200
+    body_ft = res_ft_floor.json()
+    assert body_ft["total_matches"] == 2
+    assert body_ft["match_count"] == 2
+    assert body_ft["filters"]["min_follow_through_score"] == 50
+    assert all(m["follow_through"]["score"] >= 50 for m in body_ft["matches"])
+
     assert res_and.status_code == 200
     body_and = res_and.json()
     assert body_and["match_count"] == 2
@@ -122,7 +141,7 @@ def test_session_consult_reads_fusion_and_filters_matches():
     assert body_and["filters"]["row_type"] == "transcript"
 
 
-def test_session_consult_rejects_bad_row_type_empty_query_bad_mode_bad_sort_bad_fields_bad_min_token_hits_bad_min_coverage_pct_bad_score_and_bad_offset():
+def test_session_consult_rejects_bad_row_type_empty_query_bad_mode_bad_sort_bad_fields_bad_min_token_hits_bad_min_coverage_pct_bad_score_bad_min_follow_through_score_and_bad_offset():
     fusion_path = Path("workspace/memory/intel/u_consult__s2__fusion_timeline.json")
     fusion_path.parent.mkdir(parents=True, exist_ok=True)
     fusion_path.write_text(json.dumps({"timeline_rows": []}))
@@ -160,6 +179,10 @@ def test_session_consult_rejects_bad_row_type_empty_query_bad_mode_bad_sort_bad_
             "/api/session/s2/consult",
             params={"user_id": "u_consult", "query": "x y", "min_score": "999"},
         )
+        bad_min_follow_through_score = c.get(
+            "/api/session/s2/consult",
+            params={"user_id": "u_consult", "query": "x y", "min_follow_through_score": "120"},
+        )
         bad_offset = c.get(
             "/api/session/s2/consult",
             params={"user_id": "u_consult", "query": "x y", "offset": "-1"},
@@ -173,6 +196,7 @@ def test_session_consult_rejects_bad_row_type_empty_query_bad_mode_bad_sort_bad_
     assert bad_min_token_hits.status_code == 400
     assert bad_min_coverage_pct.status_code == 400
     assert bad_score.status_code == 400
+    assert bad_min_follow_through_score.status_code == 400
     assert bad_offset.status_code == 400
 
 
