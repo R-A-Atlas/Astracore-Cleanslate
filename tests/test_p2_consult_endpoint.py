@@ -70,6 +70,7 @@ def test_session_consult_reads_fusion_and_filters_matches():
     assert body_or["filters"]["min_score"] == 20
     assert body_or["filters"]["include_context"] is True
     assert "context" in body_or["matches"][0]
+    assert body_or["matches"][0]["matched_tokens"] == ["breakout", "setup"]
 
     assert res_page2.status_code == 200
     body_p2 = res_page2.json()
@@ -82,6 +83,7 @@ def test_session_consult_reads_fusion_and_filters_matches():
     body_and = res_and.json()
     assert body_and["match_count"] == 2
     assert body_and["matches"][0]["epoch_ms"] >= body_and["matches"][1]["epoch_ms"]
+    assert body_and["matches"][0]["matched_tokens"] == ["breakout", "setup"]
     assert all("setup" in (m.get("text") or "") for m in body_and["matches"])
     assert body_and["filters"]["mode"] == "and"
     assert body_and["filters"]["sort"] == "time_desc"

@@ -182,6 +182,6 @@ Behavior:
 - supports pagination via `offset`; response returns `total_matches` and `next_offset`
 - supports sort mode: `score_desc` (default), `time_asc`, `time_desc`
 - each sort mode has deterministic tie-breakers (score/epoch)
-- each match includes `match_score`, `matched_field`, and `matched_snippet`
+- each match includes `match_score`, `matched_field`, `matched_snippet`, and `matched_tokens`
 - returns deterministic metadata (`filters`, `scanned_rows`, `match_count`)
 - never mutates session artifacts

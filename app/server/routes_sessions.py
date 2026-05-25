@@ -337,6 +337,7 @@ async def session_consult(
         if query_mode == "or" and not any(token_presence):
             continue
 
+        matched_tokens = [tok for tok in tokens if tok in blob]
         score, matched_field, matched_snippet = _score_match(row, tokens, selected_fields)
         if score <= 0 or score < min_score:
             continue
@@ -347,6 +348,7 @@ async def session_consult(
                 "row": row,
                 "matched_field": matched_field,
                 "matched_snippet": matched_snippet,
+                "matched_tokens": matched_tokens,
             }
         )
 
@@ -365,6 +367,7 @@ async def session_consult(
             "match_score": item["score"],
             "matched_field": item["matched_field"],
             "matched_snippet": item["matched_snippet"],
+            "matched_tokens": item["matched_tokens"],
         }
         if include_context:
             row_epoch = int(item["row"].get("epoch_ms") or 0)
