@@ -1,5 +1,6 @@
 import asyncio
 from datetime import datetime, timezone
+import json
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
@@ -33,6 +34,10 @@ STOP_COMMIT_RETRY_ATTEMPTS = 2
 
 def _org_lock(org_id: str) -> asyncio.Lock:
     return _ORG_COMMIT_LOCKS.setdefault(org_id, asyncio.Lock())
+
+
+def _fusion_path(user_id: str, session_id: str) -> Path:
+    return Path("workspace/memory/intel") / f"{user_id}__{session_id}__fusion_timeline.json"
 
 
 async def _run_with_retries(coro_factory, *, attempts: int, label: str):
@@ -204,6 +209,44 @@ async def session_stop_commit(payload: SessionStopCommitRequest):
         )
         save_session(state)
         raise HTTPException(status_code=500, detail=f"Stop-commit failed: {exc} | incident={incident_path}")
+
+
+@router.get("/{session_id}/consult")
+async def session_consult(session_id: str, user_id: str, query: str, limit: int = 5):
+    fusion_path = _fusion_path(user_id, session_id)
+    if not fusion_path.exists():
+        raise HTTPException(status_code=404, detail="Fusion timeline not found")
+
+    payload = json.loads(fusion_path.read_text())
+    rows = payload.get("timeline_rows", [])
+    q = (query or "").strip().lower()
+    if not q:
+        raise HTTPException(status_code=400, detail="query is required")
+
+    matches = []
+    for row in rows:
+        text_blob = " ".join(
+            [
+                str(row.get("text") or ""),
+                str(row.get("event") or ""),
+                str(row.get("frame") or ""),
+                str(row.get("source") or ""),
+            ]
+        ).lower()
+        if q in text_blob:
+            matches.append(row)
+        if len(matches) >= max(1, min(limit, 20)):
+            break
+
+    return {
+        "status": "ok",
+        "user_id": user_id,
+        "session_id": session_id,
+        "query": query,
+        "match_count": len(matches),
+        "matches": matches,
+        "fusion_timeline_path": str(fusion_path),
+    }
 
 
 @router.get("/{session_id}/status")

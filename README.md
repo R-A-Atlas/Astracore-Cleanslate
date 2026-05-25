@@ -166,3 +166,13 @@ Payload includes:
 
 Purpose:
 - provide a query-ready, unified timeline object for read-only consult APIs.
+
+## P2-4 consult API (read-only)
+New route:
+- `GET /api/session/{session_id}/consult?user_id=<id>&query=<text>&limit=5`
+
+Behavior:
+- loads fusion timeline artifact
+- performs case-insensitive keyword match across timeline row fields (`text`, `event`, `frame`, `source`)
+- returns matched rows only
+- never mutates session artifacts
