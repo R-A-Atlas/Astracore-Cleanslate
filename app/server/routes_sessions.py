@@ -466,6 +466,17 @@ async def session_consult(
     if debug:
         response["debug_counts"] = reject_counts
         response["debug_counts_scoped"] = scoped_reject_counts
+        after_time_and_type = max(0, scanned - reject_counts["time_window"] - reject_counts["row_type"])
+        after_query = max(0, after_time_and_type - reject_counts["query_mode"])
+        after_min_token_hits = max(0, after_query - reject_counts["min_token_hits"])
+        after_min_coverage = max(0, after_min_token_hits - reject_counts["min_coverage_pct"])
+        response["debug_stage_pass"] = {
+            "after_time_and_type": after_time_and_type,
+            "after_query_mode": after_query,
+            "after_min_token_hits": after_min_token_hits,
+            "after_min_coverage_pct": after_min_coverage,
+            "after_min_score": len(ranked),
+        }
     return response
 
 
