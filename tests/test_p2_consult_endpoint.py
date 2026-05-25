@@ -16,7 +16,8 @@ def test_session_consult_reads_fusion_and_filters_matches():
                     {"type": "transcript", "epoch_ms": 2000, "text": "breakout failed", "source": "transcript"},
                     {"type": "frame", "epoch_ms": 2050, "event": "visual-change-detected", "frame": "f1.png", "source": "frame_ocr"},
                     {"type": "transcript", "epoch_ms": 2100, "text": "breakout breakout setup", "source": "transcript"},
-                    {"type": "transcript", "epoch_ms": 2200, "text": "breakout momentum setup", "source": "transcript"},
+                    {"type": "transcript", "epoch_ms": 2200, "text": "action item assigned to owner after breakout setup", "source": "transcript"},
+                    {"type": "transcript", "epoch_ms": 2300, "text": "task completed and status updated", "source": "transcript"},
                 ]
             }
         )
@@ -37,6 +38,7 @@ def test_session_consult_reads_fusion_and_filters_matches():
                 "start_epoch_ms": 1000,
                 "min_score": 20,
                 "include_context": "true",
+                "include_follow_through": "true",
                 "debug": "true",
                 "limit": 1,
                 "offset": 0,
@@ -75,6 +77,7 @@ def test_session_consult_reads_fusion_and_filters_matches():
     assert body_or["filters"]["min_token_hits"] == 2
     assert body_or["filters"]["min_coverage_pct"] == 100
     assert body_or["filters"]["min_score"] == 20
+    assert body_or["filters"]["include_follow_through"] is True
     assert body_or["filters"]["include_context"] is True
     assert body_or["filters"]["debug"] is True
     assert "debug_counts" in body_or
@@ -85,6 +88,10 @@ def test_session_consult_reads_fusion_and_filters_matches():
     assert body_or["debug_stage_pass"]["after_min_score"] == body_or["total_matches"]
     assert "context" in body_or["matches"][0]
     assert body_or["matches"][0]["matched_tokens"] == ["breakout", "setup"]
+    assert "follow_through" in body_or["matches"][0]
+    assert body_or["matches"][0]["follow_through"]["score"] > 0
+    ft_signals = body_or["matches"][0]["follow_through"]["signals"]
+    assert ft_signals == sorted(ft_signals, key=lambda s: s["epoch_ms"])
 
     assert res_page2.status_code == 200
     body_p2 = res_page2.json()
@@ -94,6 +101,7 @@ def test_session_consult_reads_fusion_and_filters_matches():
     assert "debug_counts" not in body_p2
     assert "debug_counts_scoped" not in body_p2
     assert "debug_stage_pass" not in body_p2
+    assert "follow_through" not in body_p2["matches"][0]
     assert body_p2["next_offset"] is None
     assert body_p2["filters"]["offset"] == 1
 

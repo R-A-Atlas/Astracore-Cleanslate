@@ -53,6 +53,14 @@ def _tokenize_query(query: str) -> list[str]:
     return [t for t in query.strip().lower().split() if t]
 
 
+FOLLOW_THROUGH_WEIGHTS = {
+    "task_created": 20,
+    "task_completed": 35,
+    "status_change": 25,
+    "owner_ack": 20,
+}
+
+
 def _score_match(row: dict, tokens: list[str], allowed_fields: set[str]) -> tuple[int, str, str]:
     all_fields = [
         ("text", str(row.get("text") or "")),
@@ -86,6 +94,57 @@ def _score_match(row: dict, tokens: list[str], allowed_fields: set[str]) -> tupl
         best_score += 1
 
     return best_score, best_field, best_snippet
+
+
+def _build_follow_through_for_match(row_epoch: int, rows: list[dict], window_ms: int = 180000) -> dict:
+    signals = []
+    end_epoch = row_epoch + window_ms
+    for row in rows:
+        epoch = int(row.get("epoch_ms") or 0)
+        if epoch <= row_epoch or epoch > end_epoch:
+            continue
+        raw = " ".join(
+            [
+                str(row.get("text") or ""),
+                str(row.get("event") or ""),
+                str(row.get("source") or ""),
+            ]
+        ).lower()
+        signal_type = ""
+        confidence = 0.0
+        if any(k in raw for k in ["task created", "todo", "action item", "assigned"]):
+            signal_type = "task_created"
+            confidence = 0.75
+        elif any(k in raw for k in ["completed", "done", "resolved", "closed"]):
+            signal_type = "task_completed"
+            confidence = 0.9
+        elif any(k in raw for k in ["status", "moved", "progress", "updated"]):
+            signal_type = "status_change"
+            confidence = 0.7
+        elif any(k in raw for k in ["ack", "confirmed", "owner", "i will", "i'll"]):
+            signal_type = "owner_ack"
+            confidence = 0.65
+
+        if not signal_type:
+            continue
+
+        evidence = str(row.get("text") or row.get("event") or row.get("source") or "")
+        signals.append(
+            {
+                "signal_type": signal_type,
+                "epoch_ms": epoch,
+                "source": str(row.get("source") or row.get("type") or "unknown"),
+                "confidence": round(confidence, 2),
+                "evidence_snippet": _snippet(evidence, evidence.split(" ")[0] if evidence else ""),
+            }
+        )
+
+    signals.sort(key=lambda s: s["epoch_ms"])
+    score = 0
+    for s in signals:
+        score += FOLLOW_THROUGH_WEIGHTS.get(str(s.get("signal_type") or ""), 0)
+    score = max(0, min(100, score))
+    return {"signals": signals, "score": score}
 
 
 async def _run_with_retries(coro_factory, *, attempts: int, label: str):
@@ -272,6 +331,7 @@ async def session_consult(
     min_token_hits: int = 1,
     min_coverage_pct: float = 0.0,
     min_score: int = 0,
+    include_follow_through: bool = False,
     debug: bool = False,
     include_context: bool = False,
     row_type: str | None = None,
@@ -424,6 +484,9 @@ async def session_consult(
                 "before": context_before,
                 "after": context_after,
             }
+        if include_follow_through:
+            row_epoch = int(item["row"].get("epoch_ms") or 0)
+            out_row["follow_through"] = _build_follow_through_for_match(row_epoch, rows)
         matches.append(out_row)
 
     scores = [int(item["score"]) for item in ranked]
@@ -447,6 +510,7 @@ async def session_consult(
             "min_token_hits": min_token_hits,
             "min_coverage_pct": min_coverage_pct,
             "min_score": min_score,
+            "include_follow_through": include_follow_through,
             "include_context": include_context,
             "row_type": allowed_type,
             "start_epoch_ms": start_epoch_ms,
