@@ -11,6 +11,10 @@ ERROR_LOG = Path("workspace/memory/error.log")
 FREE_TIER_MAX_PLOTS = 2
 FREE_TIER_MAX_INDICATOR_DECLARATIONS = 1
 
+# Runtime guardrails to reduce resource-exhaustion risk on hostile payloads
+MAX_SCRIPT_CHARS = 200_000
+MAX_SCRIPT_LINES = 5_000
+
 # ---------------------------------------------------------------------------
 # Pine Script v6 — official built-in function dictionary
 # Any function call not in this set is treated as an invented/hallucinated name.
@@ -301,12 +305,28 @@ def _alert_conditions_are_grouped(lines: list[str]) -> bool:
 # Public validation gates
 # ---------------------------------------------------------------------------
 
+def _enforce_script_size_guards(code: str, context: str, lang: Literal["pine", "mql5"]) -> None:
+    char_count = len(code)
+    line_count = len(code.splitlines())
+    if char_count > MAX_SCRIPT_CHARS:
+        detail = f"Script size {char_count} chars exceeds max {MAX_SCRIPT_CHARS}."
+        _log_violation(context, f"{lang.upper()}_SCRIPT_TOO_LARGE", detail)
+        print(f"[SANDBOX] {detail} File save blocked.", file=sys.stderr)
+        sys.exit(1)
+    if line_count > MAX_SCRIPT_LINES:
+        detail = f"Script size {line_count} lines exceeds max {MAX_SCRIPT_LINES}."
+        _log_violation(context, f"{lang.upper()}_SCRIPT_TOO_MANY_LINES", detail)
+        print(f"[SANDBOX] {detail} File save blocked.", file=sys.stderr)
+        sys.exit(1)
+
+
 def validate_pine_v6(code: str, output_path: str | None = None) -> None:
     """
     Intercepts a Pine Script v6 generation sequence before disk write.
     Kills the process on any violation and logs to error.log.
     """
     context = output_path or "<pine_buffer>"
+    _enforce_script_size_guards(code, context, "pine")
     clean = _strip_comments(code, "pine")
     lines = code.splitlines()
 
@@ -352,6 +372,7 @@ def validate_mql5(code: str, output_path: str | None = None) -> None:
     Kills the process on any violation and logs to error.log.
     """
     context = output_path or "<mql5_buffer>"
+    _enforce_script_size_guards(code, context, "mql5")
     clean = _strip_comments(code, "mql5")
 
     # 1. Indicator buffer count — free-tier ceiling

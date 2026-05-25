@@ -32,6 +32,7 @@
 - Evidence:
   - `enzo_sandbox_scan_<timestamp>.json`
 - Pass rule: all configured safety checks pass
+- Current runtime thresholds: `MAX_SCRIPT_CHARS=200000`, `MAX_SCRIPT_LINES=5000`
 
 ### C-04 Regression Verification Gate
 - Owner: Enzo
