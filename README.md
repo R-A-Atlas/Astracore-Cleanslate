@@ -150,3 +150,19 @@ Frame rows include:
 Fallback behavior:
 - if a frame event has no `epoch_ms`, one is derived after transcript window (`max transcript end + 1 + index*1000`).
 - final rows are sorted by `epoch_ms`, then transcript before frame on ties.
+
+## P2-3 fusion lane contract
+On successful `/api/session/stop-commit`, response now also includes:
+- `fusion_timeline_path`
+
+Fusion artifact file:
+- `workspace/memory/intel/<user_id>__<session_id>__fusion_timeline.json`
+
+Payload includes:
+- `counts` (`transcript_segments`, `frame_events`, `timeline_rows`)
+- `transcript_chunks`
+- `frame_chunks`
+- `timeline_rows`
+
+Purpose:
+- provide a query-ready, unified timeline object for read-only consult APIs.

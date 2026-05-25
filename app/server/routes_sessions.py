@@ -12,8 +12,9 @@ from app.billing.usage_enforcement import (
 from app.intel.behavior_tags import infer_behavior_tags
 from app.intel.event_extractor import build_event_rows
 from app.intel.frame_ocr import extract_frame_events
+from app.intel.fusion import build_query_timeline
 from app.intel.session_summary import build_session_summary
-from app.intel.store import save_summary, save_transcript
+from app.intel.store import save_fusion_timeline, save_summary, save_transcript
 from app.intel.transcription import transcribe_audio
 from app.core.checksum import verify_timeline_alignment
 from app.core.incidents import write_failure_incident_bundle
@@ -149,6 +150,14 @@ async def session_stop_commit(payload: SessionStopCommitRequest):
             event_rows = build_event_rows(transcript_segments, frame_events)
             verify_timeline_alignment(event_rows, context=f"{payload.user_id}:{payload.session_id}")
             behavior_tags = infer_behavior_tags(transcript_segments, frame_events)
+            fusion_payload = build_query_timeline(
+                user_id=payload.user_id,
+                session_id=payload.session_id,
+                transcript_segments=transcript_segments,
+                frame_events=frame_events,
+                event_rows=event_rows,
+            )
+            fusion_timeline_path = save_fusion_timeline(payload.user_id, payload.session_id, fusion_payload)
 
             summary = build_session_summary(
                 user_id=payload.user_id,
@@ -177,6 +186,7 @@ async def session_stop_commit(payload: SessionStopCommitRequest):
                 "frame_count": state.frame_count,
                 "summary_path": summary_path,
                 "transcript_path": transcript_path,
+                "fusion_timeline_path": fusion_timeline_path,
                 "daily_review_path": daily_review_path,
                 "behavior_tags": behavior_tags,
             }

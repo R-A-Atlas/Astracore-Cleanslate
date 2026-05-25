@@ -38,3 +38,12 @@ def save_transcript(user_id: str, session_id: str, *, audio_path: str | None, se
     tmp.write_text(json.dumps(payload, indent=2))
     tmp.replace(p)
     return str(p)
+
+
+def save_fusion_timeline(user_id: str, session_id: str, payload: dict) -> str:
+    INTEL_DIR.mkdir(parents=True, exist_ok=True)
+    p = INTEL_DIR / f"{user_id}__{session_id}__fusion_timeline.json"
+    tmp = p.with_suffix(".tmp")
+    tmp.write_text(json.dumps(payload, indent=2))
+    tmp.replace(p)
+    return str(p)
