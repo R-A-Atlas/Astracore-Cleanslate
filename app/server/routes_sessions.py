@@ -269,6 +269,7 @@ async def session_consult(
     mode: str = "or",
     sort: str = "score_desc",
     fields: str | None = None,
+    min_token_hits: int = 1,
     min_score: int = 0,
     include_context: bool = False,
     row_type: str | None = None,
@@ -296,6 +297,8 @@ async def session_consult(
         raise HTTPException(status_code=400, detail="offset must be >= 0")
     if min_score < 0 or min_score > 200:
         raise HTTPException(status_code=400, detail="min_score must be between 0 and 200")
+    if min_token_hits < 1 or min_token_hits > 20:
+        raise HTTPException(status_code=400, detail="min_token_hits must be between 1 and 20")
 
     allowed_search_fields = {"text", "event", "frame", "source"}
     selected_fields = allowed_search_fields
@@ -338,6 +341,8 @@ async def session_consult(
             continue
 
         matched_tokens = [tok for tok in tokens if tok in blob]
+        if len(matched_tokens) < min_token_hits:
+            continue
         score, matched_field, matched_snippet = _score_match(row, tokens, selected_fields)
         if score <= 0 or score < min_score:
             continue
@@ -396,6 +401,7 @@ async def session_consult(
             "mode": query_mode,
             "sort": sort_mode,
             "fields": sorted(selected_fields),
+            "min_token_hits": min_token_hits,
             "min_score": min_score,
             "include_context": include_context,
             "row_type": allowed_type,
