@@ -122,17 +122,10 @@ class BatchUploadInterceptor:
 
         return packet
 
-    async def submit(self, tagged_assets: list[TaggedAsset]) -> dict:
+    async def submit_with_results(self, tagged_assets: list[TaggedAsset]) -> tuple[dict, list[dict]]:
         """
-        Accept a batch of (asset, operator_key) tuples from one or more seats.
-
-        Submissions from multiple laptops arriving simultaneously are merged
-        into a single ordered queue before the semaphore is applied, so no seat
-        can bypass the MAX_CONCURRENT=3 global cap.
-
-        The response payload is returned as soon as processing completes.
-        If the batch exceeds MAX_CONCURRENT the frontend status message is set
-        so the UI log can surface it immediately while overflow drains.
+        Process a batch and return both summary payload and per-asset result rows
+        for this specific submission (without relying on global drain semantics).
         """
         total = len(tagged_assets)
         response_payload: dict = {
@@ -140,28 +133,33 @@ class BatchUploadInterceptor:
             "message": None,
             "total": total,
         }
+        this_run_results: list[dict] = []
 
         if total > MAX_CONCURRENT:
             response_payload["message"] = STATUS_MESSAGE
-            # First MAX_CONCURRENT fire concurrently; overflow drains one-at-a-time.
             concurrent_batch = tagged_assets[:MAX_CONCURRENT]
             overflow = tagged_assets[MAX_CONCURRENT:]
 
             concurrent_results = await asyncio.gather(
                 *[self._process_one(asset, key) for asset, key in concurrent_batch]
             )
-            self._results.extend(concurrent_results)
+            this_run_results.extend(concurrent_results)
 
             for asset, key in overflow:
                 result = await self._process_one(asset, key)
-                self._results.append(result)
+                this_run_results.append(result)
         else:
             results = await asyncio.gather(
                 *[self._process_one(asset, key) for asset, key in tagged_assets]
             )
-            self._results.extend(results)
+            this_run_results.extend(results)
 
-        response_payload["processed"] = len(self._results)
+        self._results.extend(this_run_results)
+        response_payload["processed"] = len(this_run_results)
+        return response_payload, this_run_results
+
+    async def submit(self, tagged_assets: list[TaggedAsset]) -> dict:
+        response_payload, _ = await self.submit_with_results(tagged_assets)
         return response_payload
 
     def get_results(self) -> list[dict]:
