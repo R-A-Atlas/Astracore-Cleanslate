@@ -184,5 +184,6 @@ Behavior:
 - supports sort mode: `score_desc` (default), `time_asc`, `time_desc`
 - each sort mode has deterministic tie-breakers (score/epoch)
 - each match includes `match_score`, `matched_field`, `matched_snippet`, and `matched_tokens`
+- response includes `stats` block with `avg_score`, `max_score`, and `token_coverage_pct`
 - returns deterministic metadata (`filters`, `scanned_rows`, `match_count`)
 - never mutates session artifacts

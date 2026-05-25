@@ -392,6 +392,15 @@ async def session_consult(
             }
         matches.append(out_row)
 
+    scores = [int(item["score"]) for item in ranked]
+    unique_matched_tokens = sorted({tok for item in ranked for tok in item.get("matched_tokens", [])})
+    token_coverage_pct = round((len(unique_matched_tokens) / len(tokens)) * 100, 2) if tokens else 0.0
+    stats = {
+        "avg_score": round((sum(scores) / len(scores)), 2) if scores else 0.0,
+        "max_score": max(scores) if scores else 0,
+        "token_coverage_pct": token_coverage_pct,
+    }
+
     return {
         "status": "ok",
         "user_id": user_id,
@@ -414,6 +423,7 @@ async def session_consult(
         "total_matches": len(ranked),
         "match_count": len(matches),
         "next_offset": next_offset,
+        "stats": stats,
         "matches": matches,
         "fusion_timeline_path": str(fusion_path),
     }

@@ -64,6 +64,8 @@ def test_session_consult_reads_fusion_and_filters_matches():
     assert body_or["match_count"] == 1
     assert body_or["total_matches"] == 2
     assert body_or["next_offset"] == 1
+    assert body_or["stats"]["max_score"] >= body_or["stats"]["avg_score"]
+    assert body_or["stats"]["token_coverage_pct"] == 100.0
     assert body_or["filters"]["offset"] == 0
     assert body_or["filters"]["mode"] == "or"
     assert body_or["filters"]["sort"] == "score_desc"
@@ -78,12 +80,15 @@ def test_session_consult_reads_fusion_and_filters_matches():
     body_p2 = res_page2.json()
     assert body_p2["match_count"] == 1
     assert body_p2["total_matches"] == 2
+    assert body_p2["stats"]["token_coverage_pct"] == 100.0
     assert body_p2["next_offset"] is None
     assert body_p2["filters"]["offset"] == 1
 
     assert res_and.status_code == 200
     body_and = res_and.json()
     assert body_and["match_count"] == 2
+    assert body_and["stats"]["avg_score"] > 0
+    assert body_and["stats"]["max_score"] >= body_and["stats"]["avg_score"]
     assert body_and["matches"][0]["epoch_ms"] >= body_and["matches"][1]["epoch_ms"]
     assert body_and["matches"][0]["matched_tokens"] == ["breakout", "setup"]
     assert all("setup" in (m.get("text") or "") for m in body_and["matches"])
