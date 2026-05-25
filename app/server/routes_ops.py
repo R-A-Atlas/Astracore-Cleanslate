@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from app.core.ops_observability import RECENT_ERRORS, RECENT_REQUESTS, get_ops_metrics
 from app.core.security_guardrails import OPS_TOKEN_HEADER, RATE_LIMIT_PER_MIN, RATE_LIMIT_WINDOW_SEC
 from app.core.settings import load_runtime_settings
+from app.server.routes_sessions import UPLOAD_INTERCEPTOR
 from app.server.state import SESSIONS
 
 router = APIRouter(prefix="/ops", tags=["ops"])
@@ -25,6 +26,22 @@ async def ops_status():
 @router.get("/metrics")
 async def ops_metrics():
     return get_ops_metrics()
+
+
+@router.get("/upload-interceptor")
+async def ops_upload_interceptor(limit_failed: int = 10):
+    rows = UPLOAD_INTERCEPTOR.get_results()
+    ready = UPLOAD_INTERCEPTOR.get_ready_results()
+    failed = UPLOAD_INTERCEPTOR.get_failed_results()
+    processing_sessions = [s.__dict__ for s in SESSIONS.values() if s.status == "processing"]
+    return {
+        "results_total": len(rows),
+        "ready_total": len(ready),
+        "failed_total": len(failed),
+        "queue_depth": len(processing_sessions),
+        "processing_sessions": processing_sessions,
+        "recent_failed": failed[-limit_failed:],
+    }
 
 
 @router.get("/config")
