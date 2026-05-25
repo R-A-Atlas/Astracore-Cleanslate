@@ -186,6 +186,7 @@ Behavior:
 - each sort mode has deterministic tie-breakers (score/epoch)
 - each match includes `match_score`, `matched_field`, `matched_snippet`, and `matched_tokens`
 - optional `include_follow_through=true` adds `follow_through` per match with deterministic signals + score
+- optional `include_follow_through=true` adds top-level `follow_through_stats` (`avg_score`, `max_score`, `signal_count`)
 - response includes `stats` block with `avg_score`, `max_score`, and `token_coverage_pct`
 - optional `debug=true` includes deterministic `debug_counts` (why rows were rejected by filter stage)
 - optional `debug=true` includes `debug_counts_scoped` (rejections after time/type gates)

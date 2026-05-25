@@ -89,6 +89,9 @@ def test_session_consult_reads_fusion_and_filters_matches():
     assert "context" in body_or["matches"][0]
     assert body_or["matches"][0]["matched_tokens"] == ["breakout", "setup"]
     assert "follow_through" in body_or["matches"][0]
+    assert "follow_through_stats" in body_or
+    assert body_or["follow_through_stats"]["max_score"] >= body_or["follow_through_stats"]["avg_score"]
+    assert body_or["follow_through_stats"]["signal_count"] >= 1
     assert body_or["matches"][0]["follow_through"]["score"] > 0
     ft_signals = body_or["matches"][0]["follow_through"]["signals"]
     assert ft_signals == sorted(ft_signals, key=lambda s: s["epoch_ms"])
@@ -101,6 +104,7 @@ def test_session_consult_reads_fusion_and_filters_matches():
     assert "debug_counts" not in body_p2
     assert "debug_counts_scoped" not in body_p2
     assert "debug_stage_pass" not in body_p2
+    assert "follow_through_stats" not in body_p2
     assert "follow_through" not in body_p2["matches"][0]
     assert body_p2["next_offset"] is None
     assert body_p2["filters"]["offset"] == 1

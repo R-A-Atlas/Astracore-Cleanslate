@@ -440,6 +440,7 @@ async def session_consult(
             reject_counts["min_score"] += 1
             scoped_reject_counts["min_score"] += 1
             continue
+        follow_through = _build_follow_through_for_match(epoch_ms, rows) if include_follow_through else None
         ranked.append(
             {
                 "score": score,
@@ -448,6 +449,7 @@ async def session_consult(
                 "matched_field": matched_field,
                 "matched_snippet": matched_snippet,
                 "matched_tokens": matched_tokens,
+                "follow_through": follow_through,
             }
         )
 
@@ -485,8 +487,7 @@ async def session_consult(
                 "after": context_after,
             }
         if include_follow_through:
-            row_epoch = int(item["row"].get("epoch_ms") or 0)
-            out_row["follow_through"] = _build_follow_through_for_match(row_epoch, rows)
+            out_row["follow_through"] = item.get("follow_through") or {"signals": [], "score": 0}
         matches.append(out_row)
 
     scores = [int(item["score"]) for item in ranked]
@@ -497,6 +498,15 @@ async def session_consult(
         "max_score": max(scores) if scores else 0,
         "token_coverage_pct": token_coverage_pct,
     }
+    follow_through_stats = None
+    if include_follow_through:
+        ft_scores = [int((item.get("follow_through") or {}).get("score") or 0) for item in ranked]
+        ft_signal_count = sum(len((item.get("follow_through") or {}).get("signals") or []) for item in ranked)
+        follow_through_stats = {
+            "avg_score": round((sum(ft_scores) / len(ft_scores)), 2) if ft_scores else 0.0,
+            "max_score": max(ft_scores) if ft_scores else 0,
+            "signal_count": ft_signal_count,
+        }
 
     response = {
         "status": "ok",
@@ -527,6 +537,8 @@ async def session_consult(
         "matches": matches,
         "fusion_timeline_path": str(fusion_path),
     }
+    if include_follow_through:
+        response["follow_through_stats"] = follow_through_stats
     if debug:
         response["debug_counts"] = reject_counts
         response["debug_counts_scoped"] = scoped_reject_counts
