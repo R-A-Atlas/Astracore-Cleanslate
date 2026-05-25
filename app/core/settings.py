@@ -27,6 +27,13 @@ class RuntimeSettings:
     environment: str = "development"
 
 
+@dataclass(frozen=True)
+class OpsAlertSettings:
+    error_rate_warn_pct: int = 5
+    error_rate_crit_pct: int = 15
+    queue_depth_warn: int = 5
+    queue_depth_crit: int = 10
+
 
 def load_security_settings() -> SecuritySettings:
     return SecuritySettings(
@@ -40,4 +47,13 @@ def load_runtime_settings() -> RuntimeSettings:
     return RuntimeSettings(
         port=_env_int("PORT", 8080, min_value=1, max_value=65535),
         environment=os.getenv("ENVIRONMENT", "development").strip() or "development",
+    )
+
+
+def load_ops_alert_settings() -> OpsAlertSettings:
+    return OpsAlertSettings(
+        error_rate_warn_pct=_env_int("ASTRACORE_ALERT_ERROR_RATE_WARN_PCT", 5, min_value=1, max_value=100),
+        error_rate_crit_pct=_env_int("ASTRACORE_ALERT_ERROR_RATE_CRIT_PCT", 15, min_value=1, max_value=100),
+        queue_depth_warn=_env_int("ASTRACORE_ALERT_QUEUE_DEPTH_WARN", 5, min_value=1, max_value=10000),
+        queue_depth_crit=_env_int("ASTRACORE_ALERT_QUEUE_DEPTH_CRIT", 10, min_value=1, max_value=10000),
     )

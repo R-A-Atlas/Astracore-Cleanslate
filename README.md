@@ -61,6 +61,8 @@ Request-level observability is now enabled:
 New ops endpoints:
 - `GET /ops/metrics` → current counters
 - `GET /ops/upload-interceptor?limit_failed=10` → upload/processing visibility (queue depth, ready/failed totals, recent failures)
+- `GET /ops/throughput-trend?window_min=15` → request throughput/error-rate trend window
+- `GET /ops/alerts?window_min=15` → alert state from error-rate + queue-depth thresholds
 - `GET /ops/recent-requests?limit=50` → rolling request log window
 - `GET /ops/recent-errors?limit=20` → failed sessions + request exceptions
 - `GET /ops/config` → sanitized runtime/security config (no secrets)
