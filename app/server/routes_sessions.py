@@ -264,6 +264,7 @@ async def session_consult(
     user_id: str,
     query: str,
     limit: int = 5,
+    offset: int = 0,
     mode: str = "or",
     min_score: int = 0,
     include_context: bool = False,
@@ -285,6 +286,8 @@ async def session_consult(
     query_mode = (mode or "or").strip().lower()
     if query_mode not in {"or", "and"}:
         raise HTTPException(status_code=400, detail="mode must be and or or")
+    if offset < 0:
+        raise HTTPException(status_code=400, detail="offset must be >= 0")
     if min_score < 0 or min_score > 200:
         raise HTTPException(status_code=400, detail="min_score must be between 0 and 200")
 
@@ -333,9 +336,10 @@ async def session_consult(
         )
 
     ranked.sort(key=lambda x: (-x["score"], x["epoch_ms"]))
-    top = ranked[:effective_limit]
+    paged = ranked[offset : offset + effective_limit]
+    next_offset = offset + effective_limit if (offset + effective_limit) < len(ranked) else None
     matches = []
-    for item in top:
+    for item in paged:
         out_row = {
             **item["row"],
             "match_score": item["score"],
@@ -373,9 +377,12 @@ async def session_consult(
             "start_epoch_ms": start_epoch_ms,
             "end_epoch_ms": end_epoch_ms,
             "limit": effective_limit,
+            "offset": offset,
         },
         "scanned_rows": scanned,
+        "total_matches": len(ranked),
         "match_count": len(matches),
+        "next_offset": next_offset,
         "matches": matches,
         "fusion_timeline_path": str(fusion_path),
     }

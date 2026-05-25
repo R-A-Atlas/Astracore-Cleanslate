@@ -169,7 +169,7 @@ Purpose:
 
 ## P2-4 consult API (read-only)
 New route:
-- `GET /api/session/{session_id}/consult?user_id=<id>&query=<text>&limit=5&mode=<or|and>&min_score=<0..200>&include_context=<true|false>&row_type=<transcript|frame>&start_epoch_ms=<int>&end_epoch_ms=<int>`
+- `GET /api/session/{session_id}/consult?user_id=<id>&query=<text>&limit=5&offset=<0+>&mode=<or|and>&min_score=<0..200>&include_context=<true|false>&row_type=<transcript|frame>&start_epoch_ms=<int>&end_epoch_ms=<int>`
 
 Behavior:
 - loads fusion timeline artifact
@@ -178,6 +178,7 @@ Behavior:
 - supports query mode: `or` (any token) or `and` (all tokens)
 - supports `min_score` threshold filtering (0..200)
 - supports `include_context=true` to attach one before/after row around each match
+- supports pagination via `offset`; response returns `total_matches` and `next_offset`
 - ranks matches deterministically by `match_score` (desc), then `epoch_ms` (asc)
 - each match includes `match_score`, `matched_field`, and `matched_snippet`
 - returns deterministic metadata (`filters`, `scanned_rows`, `match_count`)
