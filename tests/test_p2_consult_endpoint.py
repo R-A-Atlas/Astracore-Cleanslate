@@ -78,7 +78,9 @@ def test_session_consult_reads_fusion_and_filters_matches():
     assert body_or["filters"]["include_context"] is True
     assert body_or["filters"]["debug"] is True
     assert "debug_counts" in body_or
+    assert "debug_counts_scoped" in body_or
     assert body_or["debug_counts"]["query_mode"] >= 0
+    assert body_or["debug_counts_scoped"]["query_mode"] >= 0
     assert "context" in body_or["matches"][0]
     assert body_or["matches"][0]["matched_tokens"] == ["breakout", "setup"]
 
@@ -87,6 +89,8 @@ def test_session_consult_reads_fusion_and_filters_matches():
     assert body_p2["match_count"] == 1
     assert body_p2["total_matches"] == 2
     assert body_p2["stats"]["token_coverage_pct"] == 100.0
+    assert "debug_counts" not in body_p2
+    assert "debug_counts_scoped" not in body_p2
     assert body_p2["next_offset"] is None
     assert body_p2["filters"]["offset"] == 1
 
