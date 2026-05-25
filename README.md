@@ -188,7 +188,7 @@ Behavior:
 - optional `include_follow_through=true` adds `follow_through` per match with deterministic signals + score
 - supports `min_follow_through_score` threshold (0..100) when follow-through enrichment is enabled
 - supports `follow_through_window_ms` (1000..3600000) to control look-ahead horizon for follow-through signal extraction
-- optional `include_follow_through=true` adds top-level `follow_through_stats` (`avg_score`, `max_score`, `signal_count`)
+- optional `include_follow_through=true` adds top-level `follow_through_stats` (`avg_score`, `max_score`, `signal_count`, `signal_type_counts`)
 - response includes `stats` block with `avg_score`, `max_score`, and `token_coverage_pct`
 - optional `debug=true` includes deterministic `debug_counts` (why rows were rejected by filter stage)
 - optional `debug=true` includes `debug_counts_scoped` (rejections after time/type gates)

@@ -518,10 +518,17 @@ async def session_consult(
     if include_follow_through:
         ft_scores = [int((item.get("follow_through") or {}).get("score") or 0) for item in ranked]
         ft_signal_count = sum(len((item.get("follow_through") or {}).get("signals") or []) for item in ranked)
+        signal_type_counts = {k: 0 for k in FOLLOW_THROUGH_WEIGHTS.keys()}
+        for item in ranked:
+            for sig in ((item.get("follow_through") or {}).get("signals") or []):
+                sig_type = str(sig.get("signal_type") or "")
+                if sig_type in signal_type_counts:
+                    signal_type_counts[sig_type] += 1
         follow_through_stats = {
             "avg_score": round((sum(ft_scores) / len(ft_scores)), 2) if ft_scores else 0.0,
             "max_score": max(ft_scores) if ft_scores else 0,
             "signal_count": ft_signal_count,
+            "signal_type_counts": signal_type_counts,
         }
 
     response = {

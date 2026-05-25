@@ -108,6 +108,7 @@ def test_session_consult_reads_fusion_and_filters_matches():
     assert "follow_through_stats" in body_or
     assert body_or["follow_through_stats"]["max_score"] >= body_or["follow_through_stats"]["avg_score"]
     assert body_or["follow_through_stats"]["signal_count"] >= 1
+    assert body_or["follow_through_stats"]["signal_type_counts"]["task_created"] >= 1
     assert body_or["matches"][0]["follow_through"]["score"] > 0
     ft_signals = body_or["matches"][0]["follow_through"]["signals"]
     assert ft_signals == sorted(ft_signals, key=lambda s: s["epoch_ms"])
