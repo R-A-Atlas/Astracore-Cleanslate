@@ -332,6 +332,7 @@ async def session_consult(
     min_coverage_pct: float = 0.0,
     min_score: int = 0,
     min_follow_through_score: int = 0,
+    follow_through_window_ms: int = 180000,
     include_follow_through: bool = False,
     debug: bool = False,
     include_context: bool = False,
@@ -362,6 +363,8 @@ async def session_consult(
         raise HTTPException(status_code=400, detail="min_score must be between 0 and 200")
     if min_follow_through_score < 0 or min_follow_through_score > 100:
         raise HTTPException(status_code=400, detail="min_follow_through_score must be between 0 and 100")
+    if follow_through_window_ms < 1000 or follow_through_window_ms > 3600000:
+        raise HTTPException(status_code=400, detail="follow_through_window_ms must be between 1000 and 3600000")
     if min_token_hits < 1 or min_token_hits > 20:
         raise HTTPException(status_code=400, detail="min_token_hits must be between 1 and 20")
     if min_coverage_pct < 0 or min_coverage_pct > 100:
@@ -445,7 +448,11 @@ async def session_consult(
             reject_counts["min_score"] += 1
             scoped_reject_counts["min_score"] += 1
             continue
-        follow_through = _build_follow_through_for_match(epoch_ms, rows) if include_follow_through else None
+        follow_through = (
+            _build_follow_through_for_match(epoch_ms, rows, window_ms=follow_through_window_ms)
+            if include_follow_through
+            else None
+        )
         if follow_through and int(follow_through.get("score") or 0) < min_follow_through_score:
             reject_counts["min_follow_through_score"] += 1
             scoped_reject_counts["min_follow_through_score"] += 1
@@ -530,6 +537,7 @@ async def session_consult(
             "min_coverage_pct": min_coverage_pct,
             "min_score": min_score,
             "min_follow_through_score": min_follow_through_score,
+            "follow_through_window_ms": follow_through_window_ms,
             "include_follow_through": include_follow_through,
             "include_context": include_context,
             "row_type": allowed_type,
