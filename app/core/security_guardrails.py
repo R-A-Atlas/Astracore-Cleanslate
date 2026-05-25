@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import time
 from collections import defaultdict, deque
 from typing import Deque
@@ -8,12 +7,15 @@ from typing import Deque
 from fastapi import Request
 from starlette.responses import JSONResponse
 
-OPS_TOKEN_HEADER = "x-ops-token"
-OPS_API_TOKEN = os.getenv("ASTRACORE_OPS_TOKEN", "dev-ops-token")
+from app.core.settings import load_security_settings
+
+_SECURITY = load_security_settings()
+OPS_TOKEN_HEADER = _SECURITY.ops_token_header
+OPS_API_TOKEN = _SECURITY.ops_token
 
 # Per-IP, per-endpoint rate limit for high-impact write endpoints.
-RATE_LIMIT_PER_MIN = int(os.getenv("ASTRACORE_RATE_LIMIT_PER_MIN", "60"))
-RATE_LIMIT_WINDOW_SEC = 60
+RATE_LIMIT_PER_MIN = _SECURITY.rate_limit_per_min
+RATE_LIMIT_WINDOW_SEC = _SECURITY.rate_limit_window_sec
 SENSITIVE_PATHS = {
     "/api/session/start",
     "/api/session/stop-commit",

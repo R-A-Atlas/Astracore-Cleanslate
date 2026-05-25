@@ -8,6 +8,7 @@ from app.core.security_guardrails import (
     RATE_LIMIT_WINDOW_SEC,
     ops_auth_and_rate_limit_middleware,
 )
+from app.core.settings import load_runtime_settings
 from app.server.routes_ingest import router as ingest_router
 from app.server.routes_ops import router as ops_router
 from app.server.routes_sessions import router as session_router
@@ -21,7 +22,9 @@ app.middleware("http")(ops_auth_and_rate_limit_middleware)
 
 @app.on_event("startup")
 async def startup_preflight() -> None:
+    runtime = load_runtime_settings()
     app.state.runtime = ensure_runtime_ready()
+    app.state.runtime["app"] = {"port": runtime.port, "environment": runtime.environment}
     app.state.runtime["ops_auth"] = {"header": OPS_TOKEN_HEADER, "token_env": "ASTRACORE_OPS_TOKEN"}
     app.state.runtime["rate_limit"] = {
         "sensitive_endpoints_per_min": RATE_LIMIT_PER_MIN,

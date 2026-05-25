@@ -90,6 +90,7 @@ Baseline protection for internal operations is now active:
 
 Rate-limit envs:
 - `ASTRACORE_RATE_LIMIT_PER_MIN` (default: `60`)
+- `ASTRACORE_RATE_LIMIT_WINDOW_SEC` (default: `60`)
 
 Quick ops auth check:
 ```bash
