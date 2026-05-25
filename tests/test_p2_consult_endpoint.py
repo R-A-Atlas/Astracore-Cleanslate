@@ -96,8 +96,10 @@ def test_session_consult_reads_fusion_and_filters_matches():
     assert "debug_counts_scoped" in body_or
     assert "debug_stage_pass" in body_or
     assert body_or["debug_counts"]["query_mode"] >= 0
+    assert body_or["debug_counts"]["min_follow_through_score"] >= 0
     assert body_or["debug_counts_scoped"]["query_mode"] >= 0
-    assert body_or["debug_stage_pass"]["after_min_score"] == body_or["total_matches"]
+    assert body_or["debug_counts_scoped"]["min_follow_through_score"] >= 0
+    assert body_or["debug_stage_pass"]["after_min_follow_through_score"] == body_or["total_matches"]
     assert "context" in body_or["matches"][0]
     assert body_or["matches"][0]["matched_tokens"] == ["breakout", "setup"]
     assert "follow_through" in body_or["matches"][0]

@@ -556,12 +556,15 @@ async def session_consult(
         after_query = max(0, after_time_and_type - reject_counts["query_mode"])
         after_min_token_hits = max(0, after_query - reject_counts["min_token_hits"])
         after_min_coverage = max(0, after_min_token_hits - reject_counts["min_coverage_pct"])
+        after_min_score = max(0, after_min_coverage - reject_counts["min_score"])
+        after_min_follow_through_score = max(0, after_min_score - reject_counts["min_follow_through_score"])
         response["debug_stage_pass"] = {
             "after_time_and_type": after_time_and_type,
             "after_query_mode": after_query,
             "after_min_token_hits": after_min_token_hits,
             "after_min_coverage_pct": after_min_coverage,
-            "after_min_score": len(ranked),
+            "after_min_score": after_min_score,
+            "after_min_follow_through_score": after_min_follow_through_score,
         }
     return response
 

@@ -191,6 +191,6 @@ Behavior:
 - response includes `stats` block with `avg_score`, `max_score`, and `token_coverage_pct`
 - optional `debug=true` includes deterministic `debug_counts` (why rows were rejected by filter stage)
 - optional `debug=true` includes `debug_counts_scoped` (rejections after time/type gates)
-- optional `debug=true` includes `debug_stage_pass` (remaining rows after each stage)
+- optional `debug=true` includes `debug_stage_pass` (remaining rows after each stage, including follow-through floor)
 - returns deterministic metadata (`filters`, `scanned_rows`, `match_count`)
 - never mutates session artifacts
