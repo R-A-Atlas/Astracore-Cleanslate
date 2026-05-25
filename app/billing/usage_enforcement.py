@@ -7,8 +7,8 @@ USAGE_COUNTS: dict[str, dict[str, int]] = {}
 SEAT_REGISTRY: dict[str, set[str]] = {}
 
 
-def _day_key() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+def _month_key() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m")
 
 
 def _org_key(user_id: str) -> str:
@@ -17,7 +17,7 @@ def _org_key(user_id: str) -> str:
 
 def can_start_session(*, user_id: str, plan: str, operator_key: str) -> tuple[bool, str | None]:
     policy = get_policy(plan)
-    day = _day_key()
+    month = _month_key()
 
     org = _org_key(user_id)
     seats = SEAT_REGISTRY.setdefault(org, set())
@@ -25,23 +25,28 @@ def can_start_session(*, user_id: str, plan: str, operator_key: str) -> tuple[bo
     if len(seats) > policy.max_seats:
         return False, f"Seat limit exceeded for plan '{policy.name}' ({policy.max_seats})"
 
-    key = f"{user_id}:{day}:{policy.name}"
+    key = f"{org}:{month}:{policy.name}"
     bucket = USAGE_COUNTS.setdefault(key, {"started": 0, "committed": 0})
-    if bucket["started"] >= policy.max_sessions_per_day:
-        return False, f"Daily session limit reached for plan '{policy.name}' ({policy.max_sessions_per_day})"
+    if bucket["started"] >= policy.max_sessions_per_month:
+        return False, (
+            f"Monthly session limit reached for plan '{policy.name}' "
+            f"({policy.max_sessions_per_month}). Contact billing for overage/add-on sessions."
+        )
 
     return True, None
 
 
 def mark_session_started(*, user_id: str, plan: str) -> None:
-    day = _day_key()
-    key = f"{user_id}:{day}:{plan}"
+    month = _month_key()
+    org = _org_key(user_id)
+    key = f"{org}:{month}:{plan}"
     bucket = USAGE_COUNTS.setdefault(key, {"started": 0, "committed": 0})
     bucket["started"] += 1
 
 
 def mark_session_committed(*, user_id: str, plan: str) -> None:
-    day = _day_key()
-    key = f"{user_id}:{day}:{plan}"
+    month = _month_key()
+    org = _org_key(user_id)
+    key = f"{org}:{month}:{plan}"
     bucket = USAGE_COUNTS.setdefault(key, {"started": 0, "committed": 0})
     bucket["committed"] += 1
