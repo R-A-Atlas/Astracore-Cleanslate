@@ -2,6 +2,12 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException
 
+from app.intel.behavior_tags import infer_behavior_tags
+from app.intel.event_extractor import build_event_rows
+from app.intel.frame_ocr import extract_frame_events
+from app.intel.session_summary import build_session_summary
+from app.intel.store import save_summary
+from app.intel.transcription import transcribe_audio
 from app.media_processing.splitter import finalize_session_output, process_session
 from app.server.schemas import SessionStartRequest, SessionStopCommitRequest
 from app.server.session_store import load_session, save_session
@@ -41,7 +47,26 @@ async def session_stop_commit(payload: SessionStopCommitRequest):
 
         state.merged_video = str(merged)
         state.audio_path = processed.get("audio")
-        state.frame_count = len(processed.get("frames", []))
+        frame_paths = processed.get("frames", [])
+        state.frame_count = len(frame_paths)
+
+        transcript_segments = transcribe_audio(state.audio_path) if state.audio_path else []
+        frame_events = extract_frame_events(frame_paths)
+        event_rows = build_event_rows(transcript_segments, frame_events)
+        behavior_tags = infer_behavior_tags(transcript_segments, frame_events)
+
+        summary = build_session_summary(
+            user_id=payload.user_id,
+            session_id=payload.session_id,
+            operator_key=payload.operator_key,
+            audio_path=state.audio_path,
+            frame_paths=frame_paths,
+            transcript_segments=transcript_segments,
+            event_rows=event_rows,
+            behavior_tags=behavior_tags,
+        )
+        summary_path = save_summary(payload.user_id, payload.session_id, summary)
+
         state.status = "ready"
         state.updated_at = datetime.now(timezone.utc).isoformat()
         save_session(state)
@@ -52,6 +77,8 @@ async def session_stop_commit(payload: SessionStopCommitRequest):
             "merged_video": state.merged_video,
             "audio": state.audio_path,
             "frame_count": state.frame_count,
+            "summary_path": summary_path,
+            "behavior_tags": behavior_tags,
         }
     except Exception as exc:
         state.status = "failed"
