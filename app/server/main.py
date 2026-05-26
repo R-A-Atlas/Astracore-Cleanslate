@@ -11,6 +11,7 @@ from app.core.security_guardrails import (
     ops_auth_and_rate_limit_middleware,
 )
 from app.core.settings import load_runtime_settings
+from app.server.routes_auth import router as auth_router
 from app.server.routes_ingest import router as ingest_router
 from app.server.routes_ops import router as ops_router
 from app.server.routes_sessions import router as session_router
@@ -43,3 +44,4 @@ async def health():
 app.include_router(ingest_router)
 app.include_router(session_router)
 app.include_router(ops_router)
+app.include_router(auth_router)

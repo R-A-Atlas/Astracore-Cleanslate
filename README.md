@@ -119,6 +119,22 @@ bash scripts/ops_alert_healthz_check.sh http://127.0.0.1:8080
 - returns exit `0` when healthy (`ok`)
 - returns exit `1` when degraded (`warning/critical`)
 
+## Account auth baseline (P10-2)
+New auth endpoints (file-backed local store, no DB migration):
+- `POST /api/auth/signup` (`email`, `password>=8`) → creates account + returns bearer token
+- `POST /api/auth/login` (`email`, `password`) → returns bearer token
+- `GET /api/auth/me` with `Authorization: Bearer <token>` → returns current account email
+- `POST /api/auth/password-reset/request` (`email`) → returns local reset token (dev baseline)
+- `POST /api/auth/password-reset/confirm` (`token`, `new_password>=8`) → resets password
+
+Behavior notes:
+- Passwords are hashed as `sha256(salt:password)` with per-user random salt.
+- Access tokens are HMAC-signed and include expiry (`ASTRACORE_AUTH_ACCESS_TTL_SEC`).
+- Reset tokens enforce expiry (`ASTRACORE_AUTH_RESET_TTL_SEC`) and one-time use.
+- User/reset files default to:
+  - `workspace/memory/auth/users.json`
+  - `workspace/memory/auth/reset_tokens.json`
+
 ## P2-1 transcript artifact contract
 On successful `/api/session/stop-commit`, response now includes:
 - `transcript_path`
