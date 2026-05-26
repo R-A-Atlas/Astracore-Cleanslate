@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.billing.usage_enforcement import (
     can_start_session,
+    get_usage_status,
     mark_session_committed,
     mark_session_started,
 )
@@ -207,6 +208,11 @@ async def session_start(payload: SessionStartRequest):
     mark_session_started(user_id=payload.user_id, plan=payload.plan)
     save_session(SESSIONS[session_key])
     return {"status": "ok", "session_key": session_key, "plan": payload.plan}
+
+
+@router.get("/usage-status")
+async def session_usage_status(user_id: str, plan: str = "retail"):
+    return {"status": "ok", "usage": get_usage_status(user_id=user_id, plan=plan)}
 
 
 @router.post("/stop-commit")
