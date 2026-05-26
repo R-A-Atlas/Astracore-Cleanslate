@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 
+from app.core import security_guardrails as sg
 from app.server.main import app
 
 OPS_ENDPOINTS = [
@@ -42,3 +43,17 @@ def test_ops_and_non_ops_boundary_behavior():
         status_payload = status.json()
         assert "sessions_total" in status_payload
         assert "metrics" in status_payload
+
+
+def test_ops_token_header_can_be_overridden(monkeypatch):
+    monkeypatch.setattr(sg, "OPS_TOKEN_HEADER", "x-internal-ops")
+    monkeypatch.setattr(sg, "OPS_API_TOKEN", "rotated-token")
+
+    with TestClient(app) as c:
+        wrong_header = c.get("/ops/status", headers={"x-ops-token": "rotated-token"})
+        assert wrong_header.status_code == 401
+        wrong_payload = wrong_header.json()
+        assert wrong_payload["required_header"] == "x-internal-ops"
+
+        right_header = c.get("/ops/status", headers={"x-internal-ops": "rotated-token"})
+        assert right_header.status_code == 200
