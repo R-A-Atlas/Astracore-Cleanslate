@@ -189,7 +189,7 @@ UPLOAD_INTERCEPTOR = BatchUploadInterceptor(_batch_process_asset)
 
 @router.post("/start")
 async def session_start(payload: SessionStartRequest):
-    allowed, reason = can_start_session(
+    allowed, reason, effective_plan = can_start_session(
         user_id=payload.user_id,
         plan=payload.plan,
         operator_key=payload.operator_key,
@@ -202,13 +202,13 @@ async def session_start(payload: SessionStartRequest):
         user_id=payload.user_id,
         session_id=payload.session_id,
         operator_key=payload.operator_key,
-        plan=payload.plan,
+        plan=effective_plan,
         status="recording",
         updated_at=datetime.now(timezone.utc).isoformat(),
     )
-    mark_session_started(user_id=payload.user_id, plan=payload.plan)
+    mark_session_started(user_id=payload.user_id, plan=effective_plan)
     save_session(SESSIONS[session_key])
-    return {"status": "ok", "session_key": session_key, "plan": payload.plan}
+    return {"status": "ok", "session_key": session_key, "plan": effective_plan}
 
 
 @router.get("/usage-status")

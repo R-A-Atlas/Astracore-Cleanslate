@@ -6,6 +6,7 @@ from pathlib import Path
 from threading import Lock
 
 from app.billing.plan_policy import get_policy
+from app.billing.stripe_integration import resolve_effective_plan
 
 
 USAGE_STORE_PATH = Path("workspace/memory/billing/usage_counts.json")
@@ -61,8 +62,12 @@ def _save_seats(payload: dict[str, set[str]]) -> None:
         _atomic_write_json(SEATS_STORE_PATH, serializable)
 
 
-def can_start_session(*, user_id: str, plan: str, operator_key: str) -> tuple[bool, str | None]:
-    policy = get_policy(plan)
+def can_start_session(*, user_id: str, plan: str, operator_key: str) -> tuple[bool, str | None, str]:
+    effective_plan, lock_reason, _billing_status = resolve_effective_plan(user_id=user_id, requested_plan=plan)
+    if lock_reason:
+        return False, lock_reason, effective_plan
+
+    policy = get_policy(effective_plan)
     month = _month_key()
 
     org = _org_key(user_id)
@@ -70,7 +75,7 @@ def can_start_session(*, user_id: str, plan: str, operator_key: str) -> tuple[bo
     seats = seats_by_org.setdefault(org, set())
     seats.add(operator_key)
     if len(seats) > policy.max_seats:
-        return False, f"Seat limit exceeded for plan '{policy.name}' ({policy.max_seats})"
+        return False, f"Seat limit exceeded for plan '{policy.name}' ({policy.max_seats})", policy.name
     _save_seats(seats_by_org)
 
     usage = _load_usage()
@@ -82,13 +87,13 @@ def can_start_session(*, user_id: str, plan: str, operator_key: str) -> tuple[bo
             return False, (
                 f"Monthly session limit reached for plan '{policy.name}' "
                 f"({included_limit}). V1 hard lock is active; overage is disabled."
-            )
+            ), policy.name
         return False, (
             f"Monthly session limit reached for plan '{policy.name}' "
             f"({included_limit})."
-        )
+        ), policy.name
 
-    return True, None
+    return True, None, policy.name
 
 
 def mark_session_started(*, user_id: str, plan: str) -> None:
