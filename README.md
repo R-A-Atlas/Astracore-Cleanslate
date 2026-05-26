@@ -87,8 +87,10 @@ Startup/runtime directories now also include:
 Baseline protection for internal operations is now active:
 - `/ops/*` endpoints require header auth:
   - header: `x-ops-token`
-  - token source env: `ASTRACORE_OPS_TOKEN`
+  - primary token env: `ASTRACORE_OPS_TOKEN`
+  - optional rotation token env: `ASTRACORE_OPS_TOKEN_PREV`
   - default local fallback: `dev-ops-token` (change this in real deployment)
+  - rotation behavior: when `ASTRACORE_OPS_TOKEN_PREV` is set, both tokens are accepted for a temporary cutover window.
 - Sensitive write endpoints now have per-IP rate limiting (rolling 60s window):
   - `/api/session/start`
   - `/api/session/stop-commit`

@@ -48,6 +48,7 @@ def test_ops_and_non_ops_boundary_behavior():
 def test_ops_token_header_can_be_overridden(monkeypatch):
     monkeypatch.setattr(sg, "OPS_TOKEN_HEADER", "x-internal-ops")
     monkeypatch.setattr(sg, "OPS_API_TOKEN", "rotated-token")
+    monkeypatch.setattr(sg, "OPS_API_TOKEN_PREV", "")
 
     with TestClient(app) as c:
         wrong_header = c.get("/ops/status", headers={"x-ops-token": "rotated-token"})
@@ -57,3 +58,19 @@ def test_ops_token_header_can_be_overridden(monkeypatch):
 
         right_header = c.get("/ops/status", headers={"x-internal-ops": "rotated-token"})
         assert right_header.status_code == 200
+
+
+def test_ops_token_rotation_accepts_previous_token(monkeypatch):
+    monkeypatch.setattr(sg, "OPS_TOKEN_HEADER", "x-ops-token")
+    monkeypatch.setattr(sg, "OPS_API_TOKEN", "new-token")
+    monkeypatch.setattr(sg, "OPS_API_TOKEN_PREV", "old-token")
+
+    with TestClient(app) as c:
+        old_token_req = c.get("/ops/status", headers={"x-ops-token": "old-token"})
+        assert old_token_req.status_code == 200
+
+        new_token_req = c.get("/ops/status", headers={"x-ops-token": "new-token"})
+        assert new_token_req.status_code == 200
+
+        bad_token_req = c.get("/ops/status", headers={"x-ops-token": "bad-token"})
+        assert bad_token_req.status_code == 401

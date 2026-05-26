@@ -12,6 +12,7 @@ from app.core.settings import load_security_settings
 _SECURITY = load_security_settings()
 OPS_TOKEN_HEADER = _SECURITY.ops_token_header
 OPS_API_TOKEN = _SECURITY.ops_token
+OPS_API_TOKEN_PREV = _SECURITY.ops_token_prev
 
 # Per-IP, per-endpoint rate limit for high-impact write endpoints.
 RATE_LIMIT_PER_MIN = _SECURITY.rate_limit_per_min
@@ -57,7 +58,10 @@ async def ops_auth_and_rate_limit_middleware(request: Request, call_next):
 
     if path.startswith("/ops"):
         provided = request.headers.get(OPS_TOKEN_HEADER)
-        if not OPS_API_TOKEN or provided != OPS_API_TOKEN:
+        accepted_tokens = {OPS_API_TOKEN}
+        if OPS_API_TOKEN_PREV:
+            accepted_tokens.add(OPS_API_TOKEN_PREV)
+        if not OPS_API_TOKEN or provided not in accepted_tokens:
             return JSONResponse(
                 status_code=401,
                 content={
