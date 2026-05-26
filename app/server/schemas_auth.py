@@ -39,3 +39,8 @@ class OAuthCallbackRequest(BaseModel):
     code: str = Field(..., min_length=1)
     github_user_id: str = Field(..., min_length=1)
     github_email: str | None = None
+
+
+class OAuthCodeCallbackRequest(BaseModel):
+    state: str = Field(..., min_length=1)
+    code: str = Field(..., min_length=1)

@@ -84,6 +84,22 @@ def create_user(email: str, password: str) -> dict:
     return {"email": norm_email}
 
 
+def create_oauth_user(email: str) -> dict:
+    users = _load_json(_users_path(), {})
+    norm_email = email.strip().lower()
+    if norm_email in users:
+        return {"email": norm_email}
+    users[norm_email] = {
+        "email": norm_email,
+        "salt": "",
+        "password_hash": "",
+        "created_at": int(time.time()),
+        "oauth_only": True,
+    }
+    _save_json(_users_path(), users)
+    return {"email": norm_email}
+
+
 def authenticate_user(email: str, password: str) -> dict | None:
     users = _load_json(_users_path(), {})
     norm_email = email.strip().lower()
@@ -206,3 +222,45 @@ def complete_github_oauth(*, state: str, code: str, github_user_id: str, github_
         raise HTTPException(status_code=401, detail={"code": "oauth_account_not_linked", "message": "github account is not linked"})
     token = issue_access_token(linked_email)
     return {"status": "ok", "mode": "login", "email": linked_email, "access_token": token, "token_type": "bearer"}
+
+
+def complete_google_oauth(*, state: str, code: str, google_sub: str, google_email: str) -> dict:
+    if not code.strip():
+        raise HTTPException(status_code=400, detail={"code": "oauth_code_invalid", "message": "missing oauth code"})
+    oauth_state = _consume_oauth_state(state)
+    links = _load_json(_oauth_links_path(), {"github": {"by_id": {}, "by_email": {}}, "google": {"by_id": {}, "by_email": {}}})
+    gl = links.setdefault("google", {})
+    by_id = gl.setdefault("by_id", {})
+    by_email = gl.setdefault("by_email", {})
+    sub = google_sub.strip()
+    email = google_email.strip().lower()
+
+    if oauth_state["mode"] == "link":
+        owner_email = str(oauth_state.get("email") or "").lower()
+        if not owner_email:
+            raise HTTPException(status_code=400, detail={"code": "oauth_link_invalid_state", "message": "link state missing owner"})
+        users = _load_json(_users_path(), {})
+        if owner_email not in users:
+            raise HTTPException(status_code=400, detail={"code": "oauth_link_user_missing", "message": "link owner missing"})
+        existing_owner = by_id.get(sub)
+        if existing_owner and existing_owner != owner_email:
+            raise HTTPException(status_code=409, detail={"code": "oauth_link_conflict", "message": "google account already linked"})
+        by_id[sub] = owner_email
+        by_email[owner_email] = sub
+        _save_json(_oauth_links_path(), links)
+        return {"status": "ok", "mode": "link", "email": owner_email, "google_sub": sub}
+
+    linked_email = by_id.get(sub)
+    if linked_email:
+        token = issue_access_token(linked_email)
+        return {"status": "ok", "mode": "login", "email": linked_email, "access_token": token, "token_type": "bearer"}
+
+    users = _load_json(_users_path(), {})
+    target_email = email
+    if target_email not in users:
+        create_oauth_user(target_email)
+    by_id[sub] = target_email
+    by_email[target_email] = sub
+    _save_json(_oauth_links_path(), links)
+    token = issue_access_token(target_email)
+    return {"status": "ok", "mode": "login", "email": target_email, "access_token": token, "token_type": "bearer"}

@@ -119,21 +119,31 @@ bash scripts/ops_alert_healthz_check.sh http://127.0.0.1:8080
 - returns exit `0` when healthy (`ok`)
 - returns exit `1` when degraded (`warning/critical`)
 
-## Account auth baseline (P10-2)
+## Account auth baseline (P10-2 + P10-3)
 New auth endpoints (file-backed local store, no DB migration):
 - `POST /api/auth/signup` (`email`, `password>=8`) → creates account + returns bearer token
 - `POST /api/auth/login` (`email`, `password`) → returns bearer token
 - `GET /api/auth/me` with `Authorization: Bearer <token>` → returns current account email
 - `POST /api/auth/password-reset/request` (`email`) → returns local reset token (dev baseline)
 - `POST /api/auth/password-reset/confirm` (`token`, `new_password>=8`) → resets password
+- `POST /api/auth/oauth/google/start` (`link_account: bool`) → returns secure state + Google authorize URL
+- `POST /api/auth/oauth/google/callback` (`state`, `code`) → validates state and signs user in
 
 Behavior notes:
 - Passwords are hashed as `sha256(salt:password)` with per-user random salt.
 - Access tokens are HMAC-signed and include expiry (`ASTRACORE_AUTH_ACCESS_TTL_SEC`).
 - Reset tokens enforce expiry (`ASTRACORE_AUTH_RESET_TTL_SEC`) and one-time use.
-- User/reset files default to:
+- OAuth state enforces expiry (`ASTRACORE_AUTH_OAUTH_STATE_TTL_SEC`) and one-time use.
+- Google callback in local mode performs no external network calls; tests can use deterministic code format: `local-google:<sub>:<email>`.
+- Login callback account linking behavior:
+  - if Google subject already linked: sign into linked account
+  - if no link but email exists: link to that existing local account
+  - if no local account: create first-time OAuth-only account and sign in
+- Auth persistence files default to:
   - `workspace/memory/auth/users.json`
   - `workspace/memory/auth/reset_tokens.json`
+  - `workspace/memory/auth/oauth_states.json`
+  - `workspace/memory/auth/oauth_links.json`
 
 ## P2-1 transcript artifact contract
 On successful `/api/session/stop-commit`, response now includes:

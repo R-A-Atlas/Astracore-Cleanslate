@@ -12,6 +12,7 @@ from app.core.security_guardrails import (
 )
 from app.core.settings import load_runtime_settings
 from app.server.routes_auth import router as auth_router
+from app.server.routes_auth_google import router as auth_google_router
 from app.server.routes_ingest import router as ingest_router
 from app.server.routes_ops import router as ops_router
 from app.server.routes_sessions import router as session_router
@@ -45,3 +46,4 @@ app.include_router(ingest_router)
 app.include_router(session_router)
 app.include_router(ops_router)
 app.include_router(auth_router)
+app.include_router(auth_google_router)
