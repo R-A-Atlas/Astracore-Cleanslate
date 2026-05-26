@@ -1,0 +1,13 @@
+{
+  "user_id": "u_retry",
+  "session_id": "s1",
+  "operator_key": "op",
+  "plan": "retail",
+  "status": "ready",
+  "parts_uploaded": 0,
+  "merged_video": "/tmp/final.webm",
+  "audio_path": "/tmp/fake.mp3",
+  "frame_count": 1,
+  "error": null,
+  "updated_at": "2026-05-25T22:00:22.123294+00:00"
+}

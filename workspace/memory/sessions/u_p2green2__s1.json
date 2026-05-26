@@ -1,0 +1,13 @@
+{
+  "user_id": "u_p2green2",
+  "session_id": "s1",
+  "operator_key": "op",
+  "plan": "retail",
+  "status": "ready",
+  "parts_uploaded": 1,
+  "merged_video": "workspace/captures/u_p2green2_s1_final.webm",
+  "audio_path": "workspace/captures/u_p2green2_s1_final_audio.mp3",
+  "frame_count": 0,
+  "error": null,
+  "updated_at": "2026-05-25T15:00:59.857497+00:00"
+}

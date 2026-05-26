@@ -1,0 +1,57 @@
+from datetime import datetime, timezone
+from pathlib import Path
+
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+
+from app.security.tenant_guard import enforce_operator_binding
+from app.server.session_store import save_session
+from app.server.state import SESSIONS, key
+
+router = APIRouter(prefix="/api/upload", tags=["ingest"])
+
+
+@router.post("/part")
+async def upload_part(
+    file: UploadFile = File(...),
+    user_id: str = Form(...),
+    session_id: str = Form(...),
+    operator_key: str = Form(...),
+    part_index: int = Form(...),
+):
+    session_key = key(user_id, session_id)
+    if session_key not in SESSIONS:
+        raise HTTPException(status_code=404, detail="Session not started")
+
+    target_dir = Path("workspace/uploads") / user_id / session_id
+    target_dir.mkdir(parents=True, exist_ok=True)
+    filename = f"part_{part_index:02d}_usr_{operator_key}.webm"
+    target_path = target_dir / filename
+
+    bytes_written = 0
+    with target_path.open("wb") as out:
+        while True:
+            chunk = file.file.read(1024 * 1024)
+            if not chunk:
+                break
+            out.write(chunk)
+            bytes_written += len(chunk)
+
+    if bytes_written == 0:
+        target_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=400, detail="Empty upload")
+
+    state = SESSIONS[session_key]
+    enforce_operator_binding(
+        expected_operator_key=state.operator_key,
+        provided_operator_key=operator_key,
+        stage="upload_part",
+    )
+    state.parts_uploaded += 1
+    state.updated_at = datetime.now(timezone.utc).isoformat()
+    save_session(state)
+
+    return {
+        "status": "ok",
+        "saved": str(target_path),
+        "parts_uploaded": state.parts_uploaded,
+    }

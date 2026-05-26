@@ -1,0 +1,13 @@
+{
+  "user_id": "u_inc",
+  "session_id": "s1",
+  "operator_key": "op",
+  "plan": "retail",
+  "status": "failed",
+  "parts_uploaded": 0,
+  "merged_video": null,
+  "audio_path": null,
+  "frame_count": 0,
+  "error": "merge finalize failed after 2 attempts: forced finalize failure",
+  "updated_at": "2026-05-25T22:00:22.031226+00:00"
+}

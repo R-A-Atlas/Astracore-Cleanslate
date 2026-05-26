@@ -1,0 +1,16 @@
+{
+  "generated_at": "2026-05-25T15:00:59.856924+00:00",
+  "user_id": "u_p2green2",
+  "session_id": "s1",
+  "provider": "local_stub",
+  "audio_path": "workspace/captures/u_p2green2_s1_final_audio.mp3",
+  "segment_count": 1,
+  "segments": [
+    {
+      "start_ms": 0,
+      "end_ms": 5000,
+      "text": "[P0 placeholder] transcription pending provider integration",
+      "source": "u_p2green2_s1_final_audio.mp3"
+    }
+  ]
+}

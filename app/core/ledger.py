@@ -73,6 +73,12 @@ def _deep_history_path(user_id: str) -> Path:
     return DEEP_HISTORY_DIR / f"deep_{user_id}.json"
 
 
+def _write_json_atomic(path: Path, data: dict) -> None:
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(data, indent=2))
+    os.replace(tmp, path)
+
+
 def _archive_to_deep_history(user_id: str, field: str, entry: dict) -> None:
     """Append one evicted entry to the user's offline deep history archive."""
     _ensure_deep_history_dir()
@@ -89,7 +95,7 @@ def _archive_to_deep_history(user_id: str, field: str, entry: dict) -> None:
         "archived_mistakes" if field == "historical_mistakes" else "archived_patterns"
     )
     archive[archive_key].append(entry)
-    path.write_text(json.dumps(archive, indent=2))
+    _write_json_atomic(path, archive)
 
 
 def _enforce_rolling_window(ledger: dict, user_id: str, field: str) -> dict:
@@ -265,11 +271,9 @@ async def register_operator(org_id: str, operator_id: str) -> dict:
     _ensure_seats_dir()
     seat_log_path = SEATS_DIR / f"{operator_id}_log.json"
     if not seat_log_path.exists():
-        seat_log_path.write_text(
-            json.dumps(
-                {"operator_key": operator_id, "org_token": org_id, "session_rows": []},
-                indent=2,
-            )
+        _write_json_atomic(
+            seat_log_path,
+            {"operator_key": operator_id, "org_token": org_id, "session_rows": []},
         )
 
     return json.loads(_org_ledger_path(org_id).read_text())
@@ -320,7 +324,7 @@ def append_seat_session_row(operator_id: str, row: dict) -> None:
     else:
         log = {"operator_key": operator_id, "org_token": None, "session_rows": []}
     log["session_rows"].append(row)
-    path.write_text(json.dumps(log, indent=2))
+    _write_json_atomic(path, log)
 
 
 def read_seat_log(operator_id: str) -> dict:

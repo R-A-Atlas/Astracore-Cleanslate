@@ -1,0 +1,12 @@
+{
+  "generated_at": "2026-05-25T22:00:22.129406+00:00",
+  "user_id": "u_drift",
+  "session_id": "s1",
+  "provider": "local_stub",
+  "audio_path": "/tmp/fake.mp3",
+  "segment_count": 2,
+  "segments": [
+    "line1",
+    "line2"
+  ]
+}

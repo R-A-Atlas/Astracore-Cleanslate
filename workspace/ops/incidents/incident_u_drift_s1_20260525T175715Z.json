@@ -1,0 +1,21 @@
+{
+  "created_at": "2026-05-25T17:57:15.607144+00:00",
+  "error": "[TIMELINE] Alignment violation at entry 1: gap=39500ms (drift-ceiling-exceeded). See workspace/memory/error.log.",
+  "operator_key": "op",
+  "session_id": "s1",
+  "stage": "stop_commit",
+  "state": {
+    "audio_path": "/tmp/fake.mp3",
+    "error": "[TIMELINE] Alignment violation at entry 1: gap=39500ms (drift-ceiling-exceeded). See workspace/memory/error.log.",
+    "frame_count": 2,
+    "merged_video": "/tmp/fake_final.webm",
+    "operator_key": "op",
+    "parts_uploaded": 0,
+    "plan": "retail",
+    "session_id": "s1",
+    "status": "failed",
+    "updated_at": "2026-05-25T17:57:15.607104+00:00",
+    "user_id": "u_drift"
+  },
+  "user_id": "u_drift"
+}

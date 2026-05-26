@@ -1,0 +1,13 @@
+{
+  "user_id": "u_drift",
+  "session_id": "s1",
+  "operator_key": "op",
+  "plan": "retail",
+  "status": "failed",
+  "parts_uploaded": 0,
+  "merged_video": "/tmp/fake_final.webm",
+  "audio_path": "/tmp/fake.mp3",
+  "frame_count": 2,
+  "error": "[TIMELINE] Alignment violation at entry 1: gap=39500ms (drift-ceiling-exceeded). See workspace/memory/error.log.",
+  "updated_at": "2026-05-25T22:00:22.129614+00:00"
+}

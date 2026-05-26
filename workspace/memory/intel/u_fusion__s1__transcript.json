@@ -1,0 +1,15 @@
+{
+  "generated_at": "2026-05-25T22:00:22.105836+00:00",
+  "user_id": "u_fusion",
+  "session_id": "s1",
+  "provider": "local_stub",
+  "audio_path": "/tmp/fake.mp3",
+  "segment_count": 1,
+  "segments": [
+    {
+      "start_ms": 0,
+      "end_ms": 1000,
+      "text": "hello"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "created_at": "2026-05-25T21:41:43.688300+00:00",
+  "error": "merge finalize failed after 2 attempts: forced finalize failure",
+  "operator_key": "op",
+  "session_id": "s1",
+  "stage": "stop_commit",
+  "state": {
+    "audio_path": null,
+    "error": "merge finalize failed after 2 attempts: forced finalize failure",
+    "frame_count": 0,
+    "merged_video": null,
+    "operator_key": "op",
+    "parts_uploaded": 0,
+    "plan": "retail",
+    "session_id": "s1",
+    "status": "failed",
+    "updated_at": "2026-05-25T21:41:43.688280+00:00",
+    "user_id": "u_inc"
+  },
+  "user_id": "u_inc"
+}

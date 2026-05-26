@@ -1,0 +1,45 @@
+{
+  "generated_at": "2026-05-25T15:00:59.857293+00:00",
+  "user_id": "u_p2green2",
+  "session_id": "s1",
+  "operator_key": "op",
+  "artifacts": {
+    "audio": "workspace/captures/u_p2green2_s1_final_audio.mp3",
+    "frames": [],
+    "frame_count": 0
+  },
+  "transcript": {
+    "segments": [
+      {
+        "start_ms": 0,
+        "end_ms": 5000,
+        "text": "[P0 placeholder] transcription pending provider integration",
+        "source": "u_p2green2_s1_final_audio.mp3"
+      }
+    ],
+    "segment_count": 1
+  },
+  "events": {
+    "rows": [
+      {
+        "id": "t_0",
+        "type": "transcript",
+        "epoch_ms": 0,
+        "start_ms": 0,
+        "end_ms": 5000,
+        "text": "[P0 placeholder] transcription pending provider integration",
+        "source": "u_p2green2_s1_final_audio.mp3"
+      }
+    ],
+    "count": 1
+  },
+  "behavior": {
+    "tags": [
+      {
+        "tag": "insufficient-signal",
+        "severity": "low"
+      }
+    ],
+    "count": 1
+  }
+}

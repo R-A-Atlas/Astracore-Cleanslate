@@ -1,0 +1,22 @@
+# Hermes Config Patch Template (Manual Apply)
+# File: ~/.hermes/config.yaml
+# Purpose: tighten orchestration discipline for AstraCore build sprint.
+
+delegation:
+  max_concurrent_children: 3
+  max_spawn_depth: 1
+  orchestrator_enabled: true
+
+agent:
+  # keep hard stop so loops don't run forever
+  max_turns: 90
+
+# Optional safety tightenings
+approvals:
+  mode: manual
+
+memory:
+  memory_enabled: true
+  user_profile_enabled: true
+
+# Leave model/provider unchanged unless Boss explicitly overrides.
