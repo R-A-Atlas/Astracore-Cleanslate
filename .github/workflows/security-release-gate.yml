@@ -28,6 +28,11 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           python -m pip install pytest httpx
 
+      - name: Install ffmpeg runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
       - name: Compile app
         run: python -m compileall app
 
