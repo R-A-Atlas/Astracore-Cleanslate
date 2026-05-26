@@ -68,8 +68,25 @@ def create_billing_portal_link(*, user_id: str) -> dict[str, str]:
     return {"portal_url": f"https://billing.stripe.local/portal/{portal_id}"}
 
 
+def create_paypal_checkout_session(*, user_id: str, plan: str) -> dict[str, str]:
+    norm_user = _normalize_user_id(user_id)
+    session_id = _stable_id("ppcs_test", norm_user, plan)
+    return {
+        "checkout_session_id": session_id,
+        "checkout_url": f"https://billing.paypal.local/checkout/{session_id}",
+    }
+
+
 def verify_webhook_secret(provided_secret: str | None) -> bool:
     return bool(provided_secret) and provided_secret.strip() == _webhook_secret()
+
+
+def _paypal_webhook_secret() -> str:
+    return os.getenv("ASTRACORE_PAYPAL_WEBHOOK_SECRET", "dev_paypal_webhook_secret").strip()
+
+
+def verify_paypal_webhook_secret(provided_secret: str | None) -> bool:
+    return bool(provided_secret) and provided_secret.strip() == _paypal_webhook_secret()
 
 
 def _extract_event_user_id(event: dict[str, Any]) -> str:
@@ -107,6 +124,54 @@ def process_webhook_event(event: dict[str, Any]) -> dict[str, Any]:
 
     store = _load_subscriptions()
     store[user_id] = {
+        "provider": "stripe",
+        "status": mapped,
+        "plan": plan,
+        "updated_at": now_iso,
+        "event_type": event_type,
+    }
+    _save_subscriptions(store)
+    return {"updated": True, "user_id": user_id, "status": mapped, "plan": plan}
+
+
+def _extract_paypal_user_id(event: dict[str, Any]) -> str:
+    resource = (event.get("resource") or {}) if isinstance(event, dict) else {}
+    subscriber = (resource.get("subscriber") or {}) if isinstance(resource, dict) else {}
+    candidates = [
+        resource.get("custom_id"),
+        resource.get("user_id"),
+        subscriber.get("email_address"),
+        event.get("user_id"),
+    ]
+    for val in candidates:
+        if isinstance(val, str) and val.strip():
+            return _normalize_user_id(val)
+    return ""
+
+
+def process_paypal_webhook_event(event: dict[str, Any]) -> dict[str, Any]:
+    event_type = str(event.get("event_type") or event.get("type") or "").strip().lower()
+    user_id = _extract_paypal_user_id(event)
+    if not user_id:
+        return {"updated": False, "reason": "missing_user"}
+
+    status_map = {
+        "billing.subscription.activated": "active",
+        "billing.subscription.suspended": "past_due",
+        "billing.subscription.cancelled": "canceled",
+        "billing.subscription.expired": "canceled",
+    }
+    mapped = status_map.get(event_type)
+    if not mapped:
+        return {"updated": False, "reason": "ignored_event", "user_id": user_id}
+
+    resource = (event.get("resource") or {}) if isinstance(event, dict) else {}
+    plan = str(resource.get("plan") or "retail").strip().lower() or "retail"
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    store = _load_subscriptions()
+    store[user_id] = {
+        "provider": "paypal",
         "status": mapped,
         "plan": plan,
         "updated_at": now_iso,
@@ -120,10 +185,11 @@ def get_billing_state(user_id: str) -> dict[str, str]:
     norm = _normalize_user_id(user_id)
     row = _load_subscriptions().get(norm)
     if not isinstance(row, dict):
-        return {"status": "active", "plan": "retail", "event_type": "default"}
+        return {"provider": "none", "status": "active", "plan": "retail", "event_type": "default"}
     status = str(row.get("status") or "active").strip().lower()
     plan = str(row.get("plan") or "retail").strip().lower() or "retail"
-    return {"status": status, "plan": plan, "event_type": str(row.get("event_type") or "")}
+    provider = str(row.get("provider") or "stripe").strip().lower() or "stripe"
+    return {"provider": provider, "status": status, "plan": plan, "event_type": str(row.get("event_type") or "")}
 
 
 def resolve_effective_plan(*, user_id: str, requested_plan: str) -> tuple[str, str | None, str]:

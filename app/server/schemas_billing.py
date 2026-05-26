@@ -8,3 +8,9 @@ class CreateCheckoutSessionRequest(BaseModel):
 class StripeWebhookEvent(BaseModel):
     type: str = Field(..., min_length=1)
     data: dict = Field(default_factory=dict)
+
+
+class PaypalWebhookEvent(BaseModel):
+    event_type: str = Field(..., min_length=1)
+    resource: dict = Field(default_factory=dict)
+    user_id: str | None = None

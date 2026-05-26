@@ -13,6 +13,7 @@ def _client(monkeypatch, tmp_path: Path) -> TestClient:
     monkeypatch.setenv("ASTRACORE_AUTH_OAUTH_LINKS_FILE", str(tmp_path / "oauth_links.json"))
     monkeypatch.setenv("ASTRACORE_BILLING_SUBSCRIPTIONS_FILE", str(tmp_path / "subscriptions.json"))
     monkeypatch.setenv("ASTRACORE_STRIPE_WEBHOOK_SECRET", "whsec_test")
+    monkeypatch.setenv("ASTRACORE_PAYPAL_WEBHOOK_SECRET", "ppsec_test")
     monkeypatch.setattr("app.billing.usage_enforcement.USAGE_STORE_PATH", tmp_path / "usage.json")
     monkeypatch.setattr("app.billing.usage_enforcement.SEATS_STORE_PATH", tmp_path / "seats.json")
     return TestClient(app)
@@ -83,6 +84,54 @@ def test_webhook_status_transitions_and_plan_lock(monkeypatch, tmp_path):
         assert "restricted plan lock" in blocked.json()["detail"]
 
 
+def test_paypal_checkout_and_webhook_enforcement(monkeypatch, tmp_path):
+    with _client(monkeypatch, tmp_path) as c:
+        user_email = "paypaluser@example.com"
+        token = _signup_token(c, user_email)
+        headers = {"Authorization": f"Bearer {token}"}
+
+        checkout = c.post("/api/billing/paypal/checkout-session", json={"plan": "retail"}, headers=headers)
+        assert checkout.status_code == 200
+        body = checkout.json()
+        assert body["checkout_session_id"].startswith("ppcs_test_")
+        assert body["checkout_url"].startswith("https://billing.paypal.local/checkout/")
+
+        activated = c.post(
+            "/api/billing/paypal/webhook",
+            json={
+                "event_type": "BILLING.SUBSCRIPTION.ACTIVATED",
+                "resource": {"subscriber": {"email_address": user_email}, "plan": "retail"},
+            },
+            headers={"x-paypal-webhook-secret": "ppsec_test"},
+        )
+        assert activated.status_code == 200
+        assert activated.json()["status"] == "active"
+
+        allowed = c.post(
+            "/api/session/start",
+            json={"user_id": user_email, "session_id": "s-paypal-active", "operator_key": "op1", "plan": "retail"},
+        )
+        assert allowed.status_code == 200
+
+        suspended = c.post(
+            "/api/billing/paypal/webhook",
+            json={
+                "event_type": "BILLING.SUBSCRIPTION.SUSPENDED",
+                "resource": {"subscriber": {"email_address": user_email}, "plan": "retail"},
+            },
+            headers={"x-paypal-webhook-secret": "ppsec_test"},
+        )
+        assert suspended.status_code == 200
+        assert suspended.json()["status"] == "past_due"
+
+        blocked = c.post(
+            "/api/session/start",
+            json={"user_id": user_email, "session_id": "s-paypal-locked", "operator_key": "op1", "plan": "retail"},
+        )
+        assert blocked.status_code == 403
+        assert "restricted plan lock" in blocked.json()["detail"]
+
+
 def test_webhook_rejects_bad_secret(monkeypatch, tmp_path):
     with _client(monkeypatch, tmp_path) as c:
         bad = c.post(
@@ -91,3 +140,10 @@ def test_webhook_rejects_bad_secret(monkeypatch, tmp_path):
             headers={"x-stripe-webhook-secret": "wrong"},
         )
         assert bad.status_code == 401
+
+        bad_paypal = c.post(
+            "/api/billing/paypal/webhook",
+            json={"event_type": "BILLING.SUBSCRIPTION.ACTIVATED", "resource": {"subscriber": {"email_address": "x@example.com"}}},
+            headers={"x-paypal-webhook-secret": "wrong"},
+        )
+        assert bad_paypal.status_code == 401
