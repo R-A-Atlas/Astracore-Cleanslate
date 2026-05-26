@@ -1,7 +1,7 @@
 # Branch Protection Policy (main)
 
 ## Current enforced controls
-- Required status check: `security-release-gate`
+- Required status check: `gate`
 - Strict status checks: enabled (branch must be up to date before merge)
 - Enforce for admins: enabled
 - Force pushes: disabled

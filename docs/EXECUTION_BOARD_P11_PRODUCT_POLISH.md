@@ -6,6 +6,10 @@
 - P11-3 plan key alignment (UI names ↔ backend plan IDs) — completed
 - P11-4 billing page trust + policy clarity — completed
 - P11-5 branch protection hardening — completed
+- P11-6 cleanup slice (runtime artifact hygiene + post-merge parity) — completed
+- P11-7 checkout provider fail-fast validation coverage — completed
+- P11-8 pricing trust strip near CTA — completed
+- P11-9 ops billing visibility (`/ops/billing`) — completed
 
 ## Next slices
 
@@ -31,8 +35,21 @@ Goal:
 - Remove bypass ambiguity on main and enforce required checks.
 
 DoD:
-- GitHub branch rules updated so `security-release-gate` is truly required.
+- GitHub branch rules updated so the live required check `gate` is enforced.
 - Document owner/admin exception policy.
+
+## P11-9 contract note — `/ops/billing`
+- Endpoint: `GET /ops/billing`
+- Auth: required ops token header (`x-ops-token` unless overridden by env)
+- Purpose: visibility into plan normalization and invalid plan pressure
+- Response keys:
+  - `plan_validation.total_requests`
+  - `plan_validation.backend_direct_hits`
+  - `plan_validation.alias_hits`
+  - `plan_validation.defaulted_blank`
+  - `plan_validation.invalid_attempts`
+  - `plan_validation.allowed_backend_plans`
+  - `plan_validation.allowed_aliases`
 
 ## Rules (always)
 - Run `bash scripts/release_gate_security.sh` before every push.
