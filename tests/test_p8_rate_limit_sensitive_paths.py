@@ -50,3 +50,38 @@ def test_rate_limit_applies_to_stop_commit_but_not_health(monkeypatch):
 
         health = c.get("/health")
         assert health.status_code == 200
+
+
+def test_rate_limit_applies_to_upload_part(monkeypatch):
+    monkeypatch.setattr(sg, "RATE_LIMIT_PER_MIN", 1)
+    monkeypatch.setattr(sg, "RATE_LIMIT_WINDOW_SEC", 30)
+    sg._REQUEST_WINDOWS.clear()
+
+    with TestClient(app) as c:
+        start_payload = {
+            "user_id": "rate_user_upload",
+            "session_id": "sess_upload_1",
+            "operator_key": "opA",
+            "plan": "retail",
+        }
+        started = c.post("/api/session/start", json=start_payload)
+        assert started.status_code == 200
+
+        form = {
+            "user_id": "rate_user_upload",
+            "session_id": "sess_upload_1",
+            "operator_key": "opA",
+            "part_index": "1",
+        }
+        file_payload = {
+            "file": ("part.webm", b"RIFF\x00\x00\x00\x00WEBMdemo", "video/webm"),
+        }
+
+        first = c.post("/api/upload/part", data=form, files=file_payload)
+        assert first.status_code == 200
+
+        second = c.post("/api/upload/part", data=form, files=file_payload)
+        assert second.status_code == 429
+        body = second.json()
+        assert body["detail"] == "Rate limit exceeded for sensitive endpoint"
+        assert "Retry-After" in second.headers
