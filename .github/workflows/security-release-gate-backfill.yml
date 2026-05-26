@@ -1,0 +1,41 @@
+name: security-release-gate-backfill
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: "Commit SHA to validate with current fixed gate runtime"
+        required: true
+        type: string
+
+jobs:
+  backfill-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test/runtime dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest httpx
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Compile check
+        run: python -m compileall app
+
+      - name: Security release gate suite (fixed runtime)
+        run: |
+          python -m pytest -q \
+            tests/test_p8_ops_auth_enforcement.py \
+            tests/test_p8_rate_limit_sensitive_paths.py \
+            tests/test_p8_tenant_binding.py \
+            tests/test_p9_abuse_resilience_edges.py
