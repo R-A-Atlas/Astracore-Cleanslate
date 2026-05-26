@@ -28,3 +28,14 @@ class PasswordResetRequest(_EmailModel):
 class PasswordResetConfirmRequest(BaseModel):
     token: str = Field(..., min_length=1)
     new_password: str = Field(..., min_length=8)
+
+
+class OAuthStartRequest(BaseModel):
+    link_account: bool = False
+
+
+class OAuthCallbackRequest(BaseModel):
+    state: str = Field(..., min_length=1)
+    code: str = Field(..., min_length=1)
+    github_user_id: str = Field(..., min_length=1)
+    github_email: str | None = None

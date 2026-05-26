@@ -11,6 +11,9 @@ def _client_with_tmp_auth_store(monkeypatch, tmp_path):
     monkeypatch.setenv("ASTRACORE_AUTH_RESET_FILE", str(tmp_path / "resets.json"))
     monkeypatch.setenv("ASTRACORE_AUTH_ACCESS_TTL_SEC", "3600")
     monkeypatch.setenv("ASTRACORE_AUTH_RESET_TTL_SEC", "120")
+    monkeypatch.setenv("ASTRACORE_AUTH_OAUTH_STATE_TTL_SEC", "120")
+    monkeypatch.setenv("ASTRACORE_AUTH_OAUTH_STATES_FILE", str(tmp_path / "oauth_states.json"))
+    monkeypatch.setenv("ASTRACORE_AUTH_OAUTH_LINKS_FILE", str(tmp_path / "oauth_links.json"))
     return TestClient(app)
 
 
@@ -93,3 +96,79 @@ def test_me_requires_bearer(monkeypatch, tmp_path):
         r = c.get("/api/auth/me")
         assert r.status_code == 401
         assert r.json()["detail"]["code"] == "auth_missing_bearer"
+
+
+def test_oauth_state_validation_and_reuse_rejection(monkeypatch, tmp_path):
+    with _client_with_tmp_auth_store(monkeypatch, tmp_path) as c:
+        start = c.post("/api/auth/oauth/github/start", json={"link_account": False})
+        assert start.status_code == 200
+        state = start.json()["state"]
+
+        invalid = c.post(
+            "/api/auth/oauth/github/callback",
+            json={"state": "bad", "code": "abc", "github_user_id": "gh_1"},
+        )
+        assert invalid.status_code == 400
+        assert invalid.json()["detail"]["code"] == "oauth_state_invalid"
+
+        first = c.post(
+            "/api/auth/oauth/github/callback",
+            json={"state": state, "code": "abc", "github_user_id": "gh_1"},
+        )
+        assert first.status_code == 401
+        assert first.json()["detail"]["code"] == "oauth_account_not_linked"
+
+        reused = c.post(
+            "/api/auth/oauth/github/callback",
+            json={"state": state, "code": "abc", "github_user_id": "gh_1"},
+        )
+        assert reused.status_code == 400
+        assert reused.json()["detail"]["code"] == "oauth_state_used"
+
+
+def test_oauth_link_then_login_and_conflict(monkeypatch, tmp_path):
+    with _client_with_tmp_auth_store(monkeypatch, tmp_path) as c:
+        token_a = c.post("/api/auth/signup", json={"email": "a@example.com", "password": "password123"}).json()["access_token"]
+        token_b = c.post("/api/auth/signup", json={"email": "b@example.com", "password": "password123"}).json()["access_token"]
+
+        missing_auth = c.post("/api/auth/oauth/github/start", json={"link_account": True})
+        assert missing_auth.status_code == 401
+        assert missing_auth.json()["detail"]["code"] == "auth_missing_bearer"
+
+        start_link = c.post(
+            "/api/auth/oauth/github/start",
+            json={"link_account": True},
+            headers={"Authorization": f"Bearer {token_a}"},
+        )
+        assert start_link.status_code == 200
+        state_a = start_link.json()["state"]
+
+        linked = c.post(
+            "/api/auth/oauth/github/callback",
+            json={"state": state_a, "code": "code1", "github_user_id": "gh_conflict"},
+        )
+        assert linked.status_code == 200
+        assert linked.json()["mode"] == "link"
+
+        start_login = c.post("/api/auth/oauth/github/start", json={"link_account": False})
+        state_login = start_login.json()["state"]
+        login = c.post(
+            "/api/auth/oauth/github/callback",
+            json={"state": state_login, "code": "code2", "github_user_id": "gh_conflict"},
+        )
+        assert login.status_code == 200
+        assert login.json()["email"] == "a@example.com"
+        assert login.json()["token_type"] == "bearer"
+
+        start_link_b = c.post(
+            "/api/auth/oauth/github/start",
+            json={"link_account": True},
+            headers={"Authorization": f"Bearer {token_b}"},
+        )
+        state_b = start_link_b.json()["state"]
+        conflict = c.post(
+            "/api/auth/oauth/github/callback",
+            json={"state": state_b, "code": "code3", "github_user_id": "gh_conflict"},
+        )
+        assert conflict.status_code == 409
+        assert conflict.json()["detail"]["code"] == "oauth_link_conflict"
