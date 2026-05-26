@@ -17,6 +17,7 @@ from app.server.routes_dashboard import router as dashboard_router
 from app.server.routes_ingest import router as ingest_router
 from app.server.routes_ops import router as ops_router
 from app.server.routes_sessions import router as session_router
+from app.server.routes_settings import router as settings_router
 
 @asynccontextmanager
 async def app_lifespan(app: FastAPI):
@@ -49,3 +50,4 @@ app.include_router(ops_router)
 app.include_router(auth_router)
 app.include_router(auth_google_router)
 app.include_router(dashboard_router)
+app.include_router(settings_router)
