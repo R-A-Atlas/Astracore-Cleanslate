@@ -34,6 +34,8 @@ class OpsAlertSettings:
     error_rate_crit_pct: int = 15
     queue_depth_warn: int = 5
     queue_depth_crit: int = 10
+    billing_invalid_attempts_warn: int = 3
+    billing_invalid_attempts_crit: int = 10
 
 
 def load_security_settings() -> SecuritySettings:
@@ -58,4 +60,6 @@ def load_ops_alert_settings() -> OpsAlertSettings:
         error_rate_crit_pct=_env_int("ASTRACORE_ALERT_ERROR_RATE_CRIT_PCT", 15, min_value=1, max_value=100),
         queue_depth_warn=_env_int("ASTRACORE_ALERT_QUEUE_DEPTH_WARN", 5, min_value=1, max_value=10000),
         queue_depth_crit=_env_int("ASTRACORE_ALERT_QUEUE_DEPTH_CRIT", 10, min_value=1, max_value=10000),
+        billing_invalid_attempts_warn=_env_int("ASTRACORE_ALERT_BILLING_INVALID_WARN", 3, min_value=1, max_value=100000),
+        billing_invalid_attempts_crit=_env_int("ASTRACORE_ALERT_BILLING_INVALID_CRIT", 10, min_value=1, max_value=100000),
     )
