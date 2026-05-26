@@ -1,0 +1,44 @@
+from fastapi.testclient import TestClient
+
+from app.server.main import app
+
+OPS_ENDPOINTS = [
+    "/ops/status",
+    "/ops/metrics",
+    "/ops/upload-interceptor",
+    "/ops/throughput-trend",
+    "/ops/alerts",
+    "/ops/alerts/health",
+    "/ops/alerts/healthz",
+    "/ops/config",
+    "/ops/recent-requests",
+    "/ops/recent-errors",
+]
+
+
+def test_all_ops_endpoints_reject_missing_or_invalid_token():
+    with TestClient(app) as c:
+        for endpoint in OPS_ENDPOINTS:
+            missing = c.get(endpoint)
+            assert missing.status_code == 401, endpoint
+            missing_payload = missing.json()
+            assert "missing or invalid ops token" in missing_payload["detail"]
+            assert missing_payload["required_header"] == "x-ops-token"
+
+            wrong = c.get(endpoint, headers={"x-ops-token": "wrong-token"})
+            assert wrong.status_code == 401, endpoint
+            wrong_payload = wrong.json()
+            assert "missing or invalid ops token" in wrong_payload["detail"]
+            assert wrong_payload["required_header"] == "x-ops-token"
+
+
+def test_ops_and_non_ops_boundary_behavior():
+    with TestClient(app) as c:
+        health = c.get("/health")
+        assert health.status_code == 200
+
+        status = c.get("/ops/status", headers={"x-ops-token": "dev-ops-token"})
+        assert status.status_code == 200
+        status_payload = status.json()
+        assert "sessions_total" in status_payload
+        assert "metrics" in status_payload
