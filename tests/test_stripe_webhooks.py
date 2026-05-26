@@ -58,6 +58,44 @@ def test_checkout_rejects_unknown_plan(monkeypatch, tmp_path):
         assert "Unsupported plan" in bad.json()["detail"]
 
 
+def test_checkout_rejects_unknown_plan_before_stripe_call(monkeypatch, tmp_path):
+    with _client(monkeypatch, tmp_path) as c:
+        token = _signup_token(c, "badplan-stripe@example.com")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        called = {"value": False}
+
+        def _should_not_run(*args, **kwargs):
+            called["value"] = True
+            raise AssertionError("create_checkout_session should not be called for invalid plans")
+
+        monkeypatch.setattr("app.server.routes_billing.create_checkout_session", _should_not_run)
+
+        bad = c.post("/api/billing/checkout-session", json={"plan": "moon"}, headers=headers)
+        assert bad.status_code == 400
+        assert "Unsupported plan" in bad.json()["detail"]
+        assert called["value"] is False
+
+
+def test_paypal_checkout_rejects_unknown_plan_before_provider_call(monkeypatch, tmp_path):
+    with _client(monkeypatch, tmp_path) as c:
+        token = _signup_token(c, "badplan-paypal@example.com")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        called = {"value": False}
+
+        def _should_not_run(*args, **kwargs):
+            called["value"] = True
+            raise AssertionError("create_paypal_checkout_session should not be called for invalid plans")
+
+        monkeypatch.setattr("app.server.routes_billing.create_paypal_checkout_session", _should_not_run)
+
+        bad = c.post("/api/billing/paypal/checkout-session", json={"plan": "moon"}, headers=headers)
+        assert bad.status_code == 400
+        assert "Unsupported plan" in bad.json()["detail"]
+        assert called["value"] is False
+
+
 def test_webhook_status_transitions_and_plan_lock(monkeypatch, tmp_path):
     with _client(monkeypatch, tmp_path) as c:
         user_email = "lockme@example.com"
