@@ -21,6 +21,10 @@ def test_session_start_allows_under_limit(tmp_path, monkeypatch):
         payload = usage.json()["usage"]
         assert payload["started"] == 1
         assert payload["remaining"] == payload["limit"] - 1
+        assert payload["support"]["ai_support"] == "included"
+        assert payload["support"]["queue_tier"] == "standard"
+        assert payload["support"]["live_support_scope"] == "bugs_account_only"
+        assert payload["support"]["live_support_sla"] == "24-48h"
 
 
 def test_session_start_blocks_seat_limit(tmp_path, monkeypatch):

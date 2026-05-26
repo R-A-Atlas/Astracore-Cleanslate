@@ -137,4 +137,10 @@ def get_usage_status(*, user_id: str, plan: str) -> dict:
         "remaining": max(0, included_limit - int(bucket.get("started", 0))),
         "active_seats": sorted(list(seats_by_org.get(org, set()))),
         "seat_limit": policy.max_seats,
+        "support": {
+            "ai_support": "included",
+            "queue_tier": policy.support_queue_tier,
+            "live_support_scope": policy.live_support_scope,
+            "live_support_sla": policy.live_support_sla,
+        },
     }
