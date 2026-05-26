@@ -36,16 +36,26 @@ def test_checkout_and_portal_links(monkeypatch, tmp_path):
         token = _signup_token(c, "paying@example.com")
         headers = {"Authorization": f"Bearer {token}"}
 
-        checkout = c.post("/api/billing/checkout-session", json={"plan": "retail"}, headers=headers)
+        checkout = c.post("/api/billing/checkout-session", json={"plan": "pro"}, headers=headers)
         assert checkout.status_code == 200
         body = checkout.json()
         assert body["status"] == "ok"
+        assert body["plan"] == "team"
         assert body["checkout_session_id"].startswith("cs_test_")
         assert body["checkout_url"].startswith("https://billing.stripe.local/checkout/")
 
         portal = c.get("/api/billing/portal-link", headers=headers)
         assert portal.status_code == 200
         assert portal.json()["portal_url"].startswith("https://billing.stripe.local/portal/")
+
+
+def test_checkout_rejects_unknown_plan(monkeypatch, tmp_path):
+    with _client(monkeypatch, tmp_path) as c:
+        token = _signup_token(c, "badplan@example.com")
+        headers = {"Authorization": f"Bearer {token}"}
+        bad = c.post("/api/billing/checkout-session", json={"plan": "moon"}, headers=headers)
+        assert bad.status_code == 400
+        assert "Unsupported plan" in bad.json()["detail"]
 
 
 def test_webhook_status_transitions_and_plan_lock(monkeypatch, tmp_path):

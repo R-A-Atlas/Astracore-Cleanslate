@@ -46,6 +46,19 @@ def test_session_start_blocks_seat_limit(tmp_path, monkeypatch):
         assert "Seat limit exceeded" in second.json()["detail"]
 
 
+def test_session_start_accepts_starter_alias(tmp_path, monkeypatch):
+    monkeypatch.setattr("app.billing.usage_enforcement.USAGE_STORE_PATH", tmp_path / "usage.json")
+    monkeypatch.setattr("app.billing.usage_enforcement.SEATS_STORE_PATH", tmp_path / "seats.json")
+
+    with TestClient(app) as c:
+        res = c.post(
+            "/api/session/start",
+            json={"user_id": "orgAlias:user1", "session_id": "s1", "operator_key": "op1", "plan": "starter"},
+        )
+        assert res.status_code == 200
+        assert res.json()["plan"] == "retail"
+
+
 def test_month_rollover_resets_usage_window(tmp_path, monkeypatch):
     monkeypatch.setattr("app.billing.usage_enforcement.USAGE_STORE_PATH", tmp_path / "usage.json")
     monkeypatch.setattr("app.billing.usage_enforcement.SEATS_STORE_PATH", tmp_path / "seats.json")

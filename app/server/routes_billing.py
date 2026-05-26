@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, Header, HTTPException
 
+from app.billing.plan_keys import normalize_requested_plan
 from app.billing.stripe_integration import (
     create_billing_portal_link,
     create_checkout_session,
@@ -17,14 +18,22 @@ router = APIRouter(prefix="/api/billing", tags=["billing"])
 
 @router.post("/checkout-session")
 async def create_checkout(payload: CreateCheckoutSessionRequest, user=Depends(get_current_user)):
-    session = create_checkout_session(user_id=user["email"], plan=payload.plan)
-    return {"status": "ok", **session}
+    try:
+        normalized_plan = normalize_requested_plan(payload.plan)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    session = create_checkout_session(user_id=user["email"], plan=normalized_plan)
+    return {"status": "ok", "plan": normalized_plan, **session}
 
 
 @router.post("/paypal/checkout-session")
 async def create_paypal_checkout(payload: CreateCheckoutSessionRequest, user=Depends(get_current_user)):
-    session = create_paypal_checkout_session(user_id=user["email"], plan=payload.plan)
-    return {"status": "ok", **session}
+    try:
+        normalized_plan = normalize_requested_plan(payload.plan)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    session = create_paypal_checkout_session(user_id=user["email"], plan=normalized_plan)
+    return {"status": "ok", "plan": normalized_plan, **session}
 
 
 @router.get("/portal-link")

@@ -5,6 +5,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 
+from app.billing.plan_keys import normalize_requested_plan
 from app.billing.usage_enforcement import (
     can_start_session,
     get_usage_status,
@@ -189,9 +190,14 @@ UPLOAD_INTERCEPTOR = BatchUploadInterceptor(_batch_process_asset)
 
 @router.post("/start")
 async def session_start(payload: SessionStartRequest):
+    try:
+        normalized_plan = normalize_requested_plan(payload.plan)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
     allowed, reason, effective_plan = can_start_session(
         user_id=payload.user_id,
-        plan=payload.plan,
+        plan=normalized_plan,
         operator_key=payload.operator_key,
     )
     if not allowed:
@@ -213,7 +219,11 @@ async def session_start(payload: SessionStartRequest):
 
 @router.get("/usage-status")
 async def session_usage_status(user_id: str, plan: str = "retail"):
-    return {"status": "ok", "usage": get_usage_status(user_id=user_id, plan=plan)}
+    try:
+        normalized_plan = normalize_requested_plan(plan)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"status": "ok", "usage": get_usage_status(user_id=user_id, plan=normalized_plan)}
 
 
 @router.post("/stop-commit")
