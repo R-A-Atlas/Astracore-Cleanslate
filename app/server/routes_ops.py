@@ -13,6 +13,14 @@ from app.server.state import SESSIONS
 router = APIRouter(prefix="/ops", tags=["ops"])
 
 
+def _plan_validation_level(invalid_attempts: int, warn: int, crit: int) -> str:
+    if invalid_attempts >= crit:
+        return "critical"
+    if invalid_attempts >= warn:
+        return "warning"
+    return "ok"
+
+
 def _parse_iso_z(ts: str) -> datetime | None:
     try:
         return datetime.fromisoformat(ts.replace("Z", "+00:00"))
@@ -81,6 +89,8 @@ async def ops_alerts(window_min: int = 15):
 
     error_rate = trend["error_rate_5xx_pct"]
     queue_depth = interceptor["queue_depth"]
+    billing_metrics = get_plan_validation_metrics()
+    billing_invalid_attempts = int(billing_metrics.get("invalid_attempts", 0))
 
     error_level = "ok"
     if error_rate >= alert_cfg.error_rate_crit_pct:
@@ -94,10 +104,16 @@ async def ops_alerts(window_min: int = 15):
     elif queue_depth >= alert_cfg.queue_depth_warn:
         queue_level = "warning"
 
+    billing_level = _plan_validation_level(
+        invalid_attempts=billing_invalid_attempts,
+        warn=alert_cfg.billing_invalid_attempts_warn,
+        crit=alert_cfg.billing_invalid_attempts_crit,
+    )
+
     overall = "ok"
-    if "critical" in (error_level, queue_level):
+    if "critical" in (error_level, queue_level, billing_level):
         overall = "critical"
-    elif "warning" in (error_level, queue_level):
+    elif "warning" in (error_level, queue_level, billing_level):
         overall = "warning"
 
     return {
@@ -115,6 +131,12 @@ async def ops_alerts(window_min: int = 15):
                 "warn": alert_cfg.queue_depth_warn,
                 "crit": alert_cfg.queue_depth_crit,
                 "level": queue_level,
+            },
+            "billing_plan_validation": {
+                "invalid_attempts": billing_invalid_attempts,
+                "warn": alert_cfg.billing_invalid_attempts_warn,
+                "crit": alert_cfg.billing_invalid_attempts_crit,
+                "level": billing_level,
             },
         },
         "context": {
@@ -192,6 +214,14 @@ async def ops_recent_errors(limit: int = 20):
 
 @router.get("/billing")
 async def ops_billing_metrics():
+    alert_cfg = load_ops_alert_settings()
+    plan_validation = get_plan_validation_metrics()
+    billing_level = _plan_validation_level(
+        invalid_attempts=int(plan_validation.get("invalid_attempts", 0)),
+        warn=alert_cfg.billing_invalid_attempts_warn,
+        crit=alert_cfg.billing_invalid_attempts_crit,
+    )
     return {
-        "plan_validation": get_plan_validation_metrics(),
+        "plan_validation": plan_validation,
+        "billing_plan_validation_level": billing_level,
     }

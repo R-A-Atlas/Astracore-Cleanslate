@@ -39,9 +39,36 @@ def test_ops_billing_endpoint_reports_plan_validation_metrics(monkeypatch, tmp_p
 
         ops = c.get("/ops/billing", headers={"x-ops-token": "dev-ops-token"})
         assert ops.status_code == 200
-        payload = ops.json()["plan_validation"]
+        body = ops.json()
+        payload = body["plan_validation"]
         assert payload["total_requests"] >= 2
         assert payload["alias_hits"] >= 1
         assert payload["invalid_attempts"] >= 1
         assert "starter" in payload["allowed_aliases"]
         assert "retail" in payload["allowed_backend_plans"]
+        assert body["billing_plan_validation_level"] in ("ok", "warning", "critical")
+
+
+def test_billing_plan_validation_alert_level_flips_to_critical(monkeypatch, tmp_path):
+    reset_plan_validation_metrics()
+    monkeypatch.setenv("ASTRACORE_ALERT_BILLING_INVALID_WARN", "1")
+    monkeypatch.setenv("ASTRACORE_ALERT_BILLING_INVALID_CRIT", "2")
+
+    with _client(monkeypatch, tmp_path) as c:
+        token = _signup_token(c, "ops-billing-alerts@example.com")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        bad_1 = c.post("/api/billing/checkout-session", json={"plan": "moon"}, headers=headers)
+        bad_2 = c.post("/api/billing/checkout-session", json={"plan": "sun"}, headers=headers)
+        assert bad_1.status_code == 400
+        assert bad_2.status_code == 400
+
+        ops_billing = c.get("/ops/billing", headers={"x-ops-token": "dev-ops-token"})
+        assert ops_billing.status_code == 200
+        assert ops_billing.json()["billing_plan_validation_level"] == "critical"
+
+        ops_alerts = c.get("/ops/alerts", headers={"x-ops-token": "dev-ops-token"})
+        assert ops_alerts.status_code == 200
+        checks = ops_alerts.json()["checks"]
+        assert checks["billing_plan_validation"]["invalid_attempts"] >= 2
+        assert checks["billing_plan_validation"]["level"] == "critical"
