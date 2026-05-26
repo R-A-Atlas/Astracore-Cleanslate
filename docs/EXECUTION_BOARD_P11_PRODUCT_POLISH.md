@@ -3,6 +3,9 @@
 ## Status
 - P11-1 subscription naming/pricing polish — completed
 - P11-2 support policy alignment (copy + backend support contract flags) — completed
+- P11-3 plan key alignment (UI names ↔ backend plan IDs) — completed
+- P11-4 billing page trust + policy clarity — completed
+- P11-5 branch protection hardening — completed
 
 ## Next slices
 
