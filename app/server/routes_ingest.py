@@ -3,6 +3,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
+from app.security.tenant_guard import enforce_operator_binding
 from app.server.session_store import save_session
 from app.server.state import SESSIONS, key
 
@@ -40,6 +41,11 @@ async def upload_part(
         raise HTTPException(status_code=400, detail="Empty upload")
 
     state = SESSIONS[session_key]
+    enforce_operator_binding(
+        expected_operator_key=state.operator_key,
+        provided_operator_key=operator_key,
+        stage="upload_part",
+    )
     state.parts_uploaded += 1
     state.updated_at = datetime.now(timezone.utc).isoformat()
     save_session(state)

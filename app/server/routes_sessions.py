@@ -23,6 +23,7 @@ from app.core.incidents import write_failure_incident_bundle
 from app.core.upload_handler import BatchUploadInterceptor
 from app.media_processing.splitter import finalize_session_output, process_session
 from app.reports.daily_review import build_daily_review, save_daily_review
+from app.security.tenant_guard import enforce_operator_binding
 from app.server.schemas import SessionStartRequest, SessionStopCommitRequest
 from app.server.session_store import load_session, save_session
 from app.server.state import SESSIONS, SessionState, key
@@ -222,6 +223,11 @@ async def session_stop_commit(payload: SessionStopCommitRequest):
     if not state:
         raise HTTPException(status_code=404, detail="Session not found")
 
+    enforce_operator_binding(
+        expected_operator_key=state.operator_key,
+        provided_operator_key=payload.operator_key,
+        stage="stop_commit",
+    )
     state.status = "processing"
     state.updated_at = datetime.now(timezone.utc).isoformat()
     save_session(state)
