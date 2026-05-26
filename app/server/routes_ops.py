@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Response
 
+from app.billing.plan_keys import get_plan_validation_metrics
 from app.core.ops_observability import RECENT_ERRORS, RECENT_REQUESTS, get_ops_metrics
 from app.core.security_guardrails import OPS_TOKEN_HEADER, RATE_LIMIT_PER_MIN, RATE_LIMIT_WINDOW_SEC
 from app.core.settings import load_ops_alert_settings, load_runtime_settings
@@ -186,4 +187,11 @@ async def ops_recent_errors(limit: int = 20):
         "request_errors_count": len(request_errors),
         "failed_sessions": failed_sessions[-limit:],
         "request_errors": request_errors[-limit:],
+    }
+
+
+@router.get("/billing")
+async def ops_billing_metrics():
+    return {
+        "plan_validation": get_plan_validation_metrics(),
     }

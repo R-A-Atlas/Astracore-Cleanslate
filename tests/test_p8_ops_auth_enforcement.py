@@ -14,6 +14,7 @@ OPS_ENDPOINTS = [
     "/ops/config",
     "/ops/recent-requests",
     "/ops/recent-errors",
+    "/ops/billing",
 ]
 
 
