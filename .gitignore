@@ -13,3 +13,4 @@ build/
 workspace/memory/
 workspace/uploads/
 workspace/ops/metrics_snapshot.json
+workspace/ops/incidents/
