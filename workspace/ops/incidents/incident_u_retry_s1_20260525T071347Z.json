@@ -1,0 +1,21 @@
+{
+  "created_at": "2026-05-25T07:13:47.924620+00:00",
+  "error": "'str' object has no attribute 'get'",
+  "operator_key": "op",
+  "session_id": "s1",
+  "stage": "stop_commit",
+  "state": {
+    "audio_path": "/tmp/fake.mp3",
+    "error": "'str' object has no attribute 'get'",
+    "frame_count": 1,
+    "merged_video": "/tmp/final.webm",
+    "operator_key": "op",
+    "parts_uploaded": 0,
+    "plan": "retail",
+    "session_id": "s1",
+    "status": "failed",
+    "updated_at": "2026-05-25T07:13:47.924603+00:00",
+    "user_id": "u_retry"
+  },
+  "user_id": "u_retry"
+}

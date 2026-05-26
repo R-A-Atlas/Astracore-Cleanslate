@@ -1,0 +1,11 @@
+{
+  "avg_latency_ms": 2.15,
+  "boot_count": 49,
+  "errors_total": 1,
+  "last_updated_at": "2026-05-25T22:00:22.130056+00:00",
+  "requests_2xx": 593,
+  "requests_4xx": 267,
+  "requests_5xx": 151,
+  "requests_total": 1011,
+  "started_at": "2026-05-25T22:00:21.955471+00:00"
+}

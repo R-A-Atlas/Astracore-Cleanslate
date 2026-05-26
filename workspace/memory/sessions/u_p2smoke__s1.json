@@ -1,0 +1,13 @@
+{
+  "user_id": "u_p2smoke",
+  "session_id": "s1",
+  "operator_key": "op",
+  "plan": "retail",
+  "status": "failed",
+  "parts_uploaded": 0,
+  "merged_video": null,
+  "audio_path": null,
+  "frame_count": 0,
+  "error": "merge finalize failed after 2 attempts: No webm parts found for session 's1' under 'workspace/uploads/u_p2smoke/s1'.",
+  "updated_at": "2026-05-25T14:55:32.459958+00:00"
+}
